@@ -57,4 +57,5 @@ public class Pista {
     public void setFechaAta(LocalDate fechaAta) {
         this.fechaAta = fechaAta;
     }
+
 }
