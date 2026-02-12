@@ -4,13 +4,13 @@ import java.time.LocalDate;
 
 public class Pista {
 
-    private int idPista;
+    private Integer idPista;
     private String nombre ;
     private String ubicacion;
     private boolean activa = true;
     private LocalDate fechaAta;
 
-    public Pista(int idPista, String nombre, String ubicacion, boolean activa,LocalDate fechaAta) {
+    public Pista(Integer idPista, String nombre, String ubicacion, boolean activa,LocalDate fechaAta) {
         this.idPista = this.idPista;
         this.nombre = this.nombre;
         this.ubicacion = this.ubicacion;
@@ -18,7 +18,7 @@ public class Pista {
         this.fechaAta = this.fechaAta;
     }
 
-    public int getIdPista() {
+    public Integer getIdPista() {
         return idPista;
     }
 
