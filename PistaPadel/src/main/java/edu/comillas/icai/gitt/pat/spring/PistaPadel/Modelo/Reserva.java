@@ -14,10 +14,13 @@ public class Reserva {
     private LocalTime horaInicio;
     private LocalTime horaFin;;
     private int duracionMinutosa;
-    private String estado;
+    private EstadoReserva estado;
     private LocalDateTime fechaCreacion;
 
-    public Reserva(Integer idPista, String nombre, String ubicacion, boolean activa,LocalDate fechaAta) {
+    public Reserva(Integer idReserva, Integer idUsuario, Integer idPista,
+                   LocalDate fechaReserva, LocalTime horaInicio,
+                   int duracionMinutos, EstadoReserva estado,
+                   LocalDateTime fechaCreacion) {
         this.idReserva = this.idReserva;
         this.idUsuario = this.idUsuario;
         this.idPista = this.idPista;
@@ -54,7 +57,7 @@ public class Reserva {
         return duracionMinutosa;
     }
 
-    public String getEstado() {
+    public EstadoReserva getEstado() {
         return estado;
     }
 
@@ -86,7 +89,7 @@ public class Reserva {
         this.fechaCreacion = fechaCreacion;
     }
 
-    public void setEstado(String estado) {
+    public void setEstado(EstadoReserva estado) {
         this.estado = estado;
     }
 
