@@ -6,8 +6,7 @@ public record ModeloPista (
 
     @NotBlank(message = "La ubicación es obligatoria")
     String ubicacion,
-
-    // Para PATCH: si no lo envían, queda null y no lo modificas
     Boolean activa
+
 
 ) { }
