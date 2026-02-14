@@ -6,6 +6,7 @@ public class Pista {
 
     private Integer idPista;
     private String nombre ;
+    private int precioHora;
     private String ubicacion;
     private boolean activa = true;
     private LocalDate fechaAta;
