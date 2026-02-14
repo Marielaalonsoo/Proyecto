@@ -1,4 +1,4 @@
-package edu.comillas.icai.gitt.pat.spring.PistaPadel.excepciones;
+package edu.comillas.icai.gitt.pat.spring.PistaPadel.Excepciones;
 import org.springframework.validation.BindingResult;
 import org.springframework.validation.FieldError;
 import java.util.List;
@@ -15,5 +15,3 @@ public class ExcepcionPistaIncorrecta extends RuntimeException{
         return errores;
     }
 }
-
-burrrrrrrrrp
