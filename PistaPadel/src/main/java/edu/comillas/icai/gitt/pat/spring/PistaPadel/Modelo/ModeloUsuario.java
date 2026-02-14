@@ -1,11 +1,13 @@
 package edu.comillas.icai.gitt.pat.spring.PistaPadel.Modelo;
 
 import jakarta.validation.constraints.Email;
+import jakarta.validation.constraints.NotBlank;
 
 public record ModeloUsuario(
-        String nombre,
+        @NotBlank String nombre,
         String apellidos,
-        @Email(message = "email no válido") String email,
-        String password,
+        @NotBlank @Email String email,
+        @NotBlank String password,
         String telefono
 ) {}
+

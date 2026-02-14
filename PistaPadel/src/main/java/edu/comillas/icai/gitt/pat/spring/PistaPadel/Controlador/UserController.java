@@ -20,45 +20,57 @@ public class UserController {
 
     private final AlmacenMemoria almacen = AlmacenMemoria.getAlmacen();
 
-    private Usuario usuarioSesion(HttpSession session) {
-        Object idObj = session.getAttribute("idUsuario");
-        if (idObj == null) throw new ResponseStatusException(HttpStatus.UNAUTHORIZED);
+    private Usuario getUsuarioLogueado(HttpSession session) {
+        Object aux = session.getAttribute("idUsuario");
+        if (aux == null) throw new ResponseStatusException(HttpStatus.UNAUTHORIZED);
 
-        Integer id = (Integer) idObj;
+        Integer id;
+        try {
+            id = (Integer) aux;
+        } catch (Exception e) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED);
+        }
+
         Usuario u = almacen.usuariosPorId.get(id);
-
         if (u == null || !u.isActivo()) throw new ResponseStatusException(HttpStatus.UNAUTHORIZED);
+
         return u;
     }
 
-    private Map<String, Object> respuesta(Usuario u) {
-        Map<String, Object> res = new HashMap<>();
-        res.put("idUsuario", u.getIdUsuario());
-        res.put("nombre", u.getNombre());
-        res.put("apellidos", u.getApellidos());
-        res.put("email", u.getEmail());
-        res.put("telefono", u.getTelefono());
-        res.put("rol", u.getRol().toString());
-        res.put("activo", u.isActivo());
-        res.put("fechaRegistro", u.getFechaRegistro());
-        return res;
+    private Map<String, Object> limpiar(Usuario u) {
+        Map<String, Object> m = new HashMap<>();
+        m.put("idUsuario", u.getIdUsuario());
+        m.put("nombre", u.getNombre());
+        m.put("apellidos", u.getApellidos());
+        m.put("email", u.getEmail());
+        m.put("telefono", u.getTelefono());
+        m.put("rol", u.getRol().toString());
+        m.put("activo", u.isActivo());
+        m.put("fechaRegistro", u.getFechaRegistro());
+        return m;
     }
 
+    // (ADMIN) GET /pistaPadel/users
     @GetMapping
-    public ResponseEntity<?> listar(HttpSession session) {
-        Usuario u = usuarioSesion(session);
+    public ResponseEntity<?> getUsers(HttpSession session) {
+
+        Usuario u = getUsuarioLogueado(session);
         if (u.getRol() != Rol.ADMIN) throw new ResponseStatusException(HttpStatus.FORBIDDEN);
 
-        List<Map<String, Object>> out = new ArrayList<>();
-        for (Usuario x : almacen.usuariosPorId.values()) {
-            out.add(respuesta(x));
-        }
-        return ResponseEntity.ok(out);
+        List<Usuario> todos = new ArrayList<>(almacen.usuariosPorId.values());
+        todos.sort(Comparator.comparing(Usuario::getIdUsuario));
+
+        List<Map<String, Object>> lista = new ArrayList<>();
+        for (Usuario x : todos) lista.add(limpiar(x));
+
+        return ResponseEntity.ok(lista);
     }
 
+    // (ADMIN o dueño) GET /pistaPadel/users/{userId}
     @GetMapping("/{userId}")
-    public ResponseEntity<?> obtener(@PathVariable Integer userId, HttpSession session) {
-        Usuario u = usuarioSesion(session);
+    public ResponseEntity<?> getUser(@PathVariable Integer userId, HttpSession session) {
+
+        Usuario u = getUsuarioLogueado(session);
 
         if (u.getRol() != Rol.ADMIN && !u.getIdUsuario().equals(userId)) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN);
@@ -67,19 +79,19 @@ public class UserController {
         Usuario x = almacen.usuariosPorId.get(userId);
         if (x == null) throw new ResponseStatusException(HttpStatus.NOT_FOUND);
 
-        return ResponseEntity.ok(respuesta(x));
+        return ResponseEntity.ok(limpiar(x));
     }
 
+    // (ADMIN o dueño) PATCH /pistaPadel/users/{userId}
     @PatchMapping("/{userId}")
-    public ResponseEntity<?> patch(@PathVariable Integer userId,
-                                   @Valid @RequestBody ModeloUsuario req,
-                                   BindingResult result,
-                                   HttpSession session) {
+    public ResponseEntity<?> patchUser(@PathVariable Integer userId,
+                                       @Valid @RequestBody ModeloUsuarioPatch req,
+                                       BindingResult br,
+                                       HttpSession session) {
 
-        if (result.hasErrors()) throw new ExcepcionDatosIncorrectos(result);
+        if (br.hasErrors()) throw new ExcepcionDatosIncorrectos(br);
 
-        Usuario u = usuarioSesion(session);
-
+        Usuario u = getUsuarioLogueado(session);
         if (u.getRol() != Rol.ADMIN && !u.getIdUsuario().equals(userId)) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN);
         }
@@ -87,22 +99,32 @@ public class UserController {
         Usuario x = almacen.usuariosPorId.get(userId);
         if (x == null) throw new ResponseStatusException(HttpStatus.NOT_FOUND);
 
+        // nombre
         if (req.nombre() != null) {
-            String n = req.nombre().trim();
-            if (n.isEmpty()) throw new ResponseStatusException(HttpStatus.BAD_REQUEST);
-            x.setNombre(n);
+            String nombre = req.nombre().trim();
+            if (nombre.isEmpty()) throw new ResponseStatusException(HttpStatus.BAD_REQUEST);
+            x.setNombre(nombre);
         }
-        if (req.apellidos() != null) x.setApellidos(req.apellidos().trim());
-        if (req.telefono() != null) x.setTelefono(req.telefono().trim());
 
+        // apellidos
+        if (req.apellidos() != null) {
+            x.setApellidos(req.apellidos().trim());
+        }
+
+        // telefono
+        if (req.telefono() != null) {
+            x.setTelefono(req.telefono().trim());
+        }
+
+        // email + 409 si duplicado
         if (req.email() != null) {
             String nuevo = req.email().trim();
             String nuevoNorm = almacen.normalizarEmail(nuevo);
             String actualNorm = almacen.normalizarEmail(x.getEmail());
 
             if (!nuevoNorm.equals(actualNorm)) {
-                Integer ya = almacen.idUsuarioPorEmail.get(nuevoNorm);
-                if (ya != null && !ya.equals(x.getIdUsuario())) {
+                Integer idExistente = almacen.idUsuarioPorEmail.get(nuevoNorm);
+                if (idExistente != null && !idExistente.equals(x.getIdUsuario())) {
                     throw new ResponseStatusException(HttpStatus.CONFLICT);
                 }
                 almacen.idUsuarioPorEmail.remove(actualNorm);
@@ -110,6 +132,7 @@ public class UserController {
                 x.setEmail(nuevo);
             }
         }
-        return ResponseEntity.ok(respuesta(x));
+
+        return ResponseEntity.ok(limpiar(x));
     }
 }
