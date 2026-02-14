@@ -3,12 +3,15 @@ package edu.comillas.icai.gitt.pat.spring.PistaPadel.Almacen;
 import edu.comillas.icai.gitt.pat.spring.PistaPadel.Modelo.Pista;
 import edu.comillas.icai.gitt.pat.spring.PistaPadel.Modelo.Reserva;
 import edu.comillas.icai.gitt.pat.spring.PistaPadel.Modelo.Usuario;
+import org.springframework.stereotype.Repository;
 
 import java.util.HashMap;
 import java.util.Map;
 
 //Como todavía no se usa una BBDD, se opta por crear esta clase
 //para almacenar la memoria y los usuarios del proyecto.
+//Añado la etiqueta Repository para cuando Reserva controller intente usar @Autowired AlmacenMemoria
+@Repository
 public class AlmacenMemoria {
 
     private static final AlmacenMemoria almacen = new AlmacenMemoria();
@@ -59,5 +62,29 @@ public class AlmacenMemoria {
     public String normalizarNombre(String nombre) {
         if (nombre == null) return null;
         return nombre.trim().toLowerCase();
+    }
+
+    //Metodo que mete la reserva en el mapa "reservasPorId"
+    public void guardarReserva(Reserva reserva) {
+        reservasPorId.put(reserva.getIdReserva(), reserva);
+    }
+
+    //Devuelve todas las reservas guardadas
+    public Map<Integer, Reserva> getReservas() {
+        return reservasPorId;
+    }
+
+    //Busca en el mapa pistasPorId si existe una pista con ese numero
+    public Pista buscarPista(Integer id) {
+        return pistasPorId.get(id);
+    }
+
+    //Acceder a usuarios
+    public Map<Integer, Usuario> usuarios = usuariosPorId; // Alias para que funcione mi código anterior
+
+    //Permite coger un usuario para que POST no falle
+    public Usuario buscarUsuarioPorToken(String token) {
+        if (usuariosPorId.isEmpty()) return null;
+        return usuariosPorId.values().iterator().next();
     }
 }
