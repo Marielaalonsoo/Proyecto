@@ -9,14 +9,15 @@ public class Pista {
     private int precioHora;
     private String ubicacion;
     private boolean activa = true;
-    private LocalDate fechaAta;
+    private LocalDate fechaAlta;
 
     public Pista(Integer idPista, String nombre, String ubicacion, boolean activa,LocalDate fechaAta) {
-        this.idPista = this.idPista;
-        this.nombre = this.nombre;
-        this.ubicacion = this.ubicacion;
-        this.activa = this.activa;
-        this.fechaAta = this.fechaAta;
+        this.idPista = idPista;
+        this.nombre = nombre;
+        this.precioHora = precioHora;
+        this.ubicacion = ubicacion;
+        this.activa = activa;
+        this.fechaAlta = fechaAta;
     }
 
     public Integer getIdPista() {
@@ -36,7 +37,7 @@ public class Pista {
     }
 
     public LocalDate getFechaAta() {
-        return fechaAta;
+        return fechaAlta;
     }
 
     public void setIdPista(int idPista) {
@@ -56,7 +57,10 @@ public class Pista {
     }
 
     public void setFechaAta(LocalDate fechaAta) {
-        this.fechaAta = fechaAta;
+        this.fechaAlta = fechaAta;
     }
+
+    public int getPrecioHora() { return precioHora; }
+    public void setPrecioHora(int precioHora) { this.precioHora = precioHora; }
 
 }
