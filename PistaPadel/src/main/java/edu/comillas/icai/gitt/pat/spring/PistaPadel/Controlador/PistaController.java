@@ -12,7 +12,6 @@ import java.util.Comparator;
 import java.util.List;
 
 @RestController
-@RequestMapping("/pistaPadel/courts")
 public class PistaController {
 
     private final AlmacenMemoria almacen = AlmacenMemoria.getAlmacen();
@@ -70,7 +69,7 @@ public class PistaController {
     }
 
     // PATCH /pistaPadel/courts/{courtId} (ADMIN) -> 200 / 400 / 404 / 409
-    @PatchMapping("/{courtId}")
+    @PatchMapping("/pistaPadel/courts/{courtId}")
     @PreAuthorize("hasRole('ADMIN')")
     public Pista modificar(@PathVariable int courtId, @RequestBody Pista cambios) {
 
@@ -124,7 +123,7 @@ public class PistaController {
     }
 
     // DELETE /pistaPadel/courts/{courtId} (ADMIN) -> 204 / 404
-    @DeleteMapping("/{courtId}")
+    @DeleteMapping("/pistaPadel/courts/{courtId}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     @PreAuthorize("hasRole('ADMIN')")
     public void borrar(@PathVariable int courtId) {
