@@ -14,7 +14,9 @@ public class Usuario {
         private LocalDateTime fechaRegistro;
         private boolean activo;
 
-        public Usuario(Integer idUsuario, String nombre, String apellidos, String email,
+    public Usuario() { }
+
+    public Usuario(Integer idUsuario, String nombre, String apellidos, String email,
                        String password, String telefono, Rol rol,
                        LocalDateTime fechaRegistro, boolean activo) {
 
