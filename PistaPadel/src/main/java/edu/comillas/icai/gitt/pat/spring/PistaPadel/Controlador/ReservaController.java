@@ -78,6 +78,7 @@ import edu.comillas.icai.gitt.pat.spring.PistaPadel.Modelo.*;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 
@@ -95,6 +96,7 @@ public class ReservaController {
 
     // POST /pistaPadel/reservations  -> 201 / 400 / 401 / 404 / 409
     @PostMapping("/reservations")
+    @PreAuthorize("hasRole('USER')")
     public ResponseEntity<Reserva> crearReserva(@RequestBody ModeloReserva body) {
 
         // 400 básicos
@@ -112,7 +114,7 @@ public class ReservaController {
 
         // Regla: no se puede reservar una pista inactiva
         if (!pista.isActiva()) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT, "La pista está inactiva");
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "La pista esta inactiva");
         }
 
         LocalTime inicio = body.time();
