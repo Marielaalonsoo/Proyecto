@@ -24,7 +24,7 @@ public class AuthController {
 
     private final AlmacenMemoria almacen = AlmacenMemoria.getAlmacen();
 
-    // 400
+
     @ExceptionHandler(ExcepcionDatosIncorrectos.class)
     @ResponseStatus(HttpStatus.BAD_REQUEST)
     public List<ModeloCampoIncorrecto> datosIncorrectos(ExcepcionDatosIncorrectos ex) {
