@@ -1,12 +1,15 @@
 package edu.comillas.icai.gitt.pat.spring.PistaPadel.Almacen;
 
+import edu.comillas.icai.gitt.pat.spring.PistaPadel.Modelo.EstadoReserva;
 import edu.comillas.icai.gitt.pat.spring.PistaPadel.Modelo.Pista;
 import edu.comillas.icai.gitt.pat.spring.PistaPadel.Modelo.Reserva;
 import edu.comillas.icai.gitt.pat.spring.PistaPadel.Modelo.Usuario;
 import org.springframework.stereotype.Repository;
 
-import java.util.HashMap;
-import java.util.Map;
+import java.time.LocalDate;
+import java.time.LocalTime;
+import java.util.*;
+import java.util.stream.Collectors;
 
 //Como todavía no se usa una BBDD, se opta por crear esta clase
 //para almacenar la memoria y los usuarios del proyecto.
@@ -35,6 +38,7 @@ public class AlmacenMemoria {
     public final Map<String, Integer> idPistaPorNombre = new HashMap<>();
 
     public final Map<Integer, Reserva> reservasPorId = new HashMap<>();
+    public final Map<Integer, List<Reserva>> reservasPorPista = new HashMap<>();
 
     public int generarIdUsuario() {
         int id = nextUsuarioId;
@@ -67,7 +71,12 @@ public class AlmacenMemoria {
     //Metodo que mete la reserva en el mapa "reservasPorId"
     public void guardarReserva(Reserva reserva) {
         reservasPorId.put(reserva.getIdReserva(), reserva);
+
+        reservasPorPista
+                .computeIfAbsent(reserva.getIdPista(), k -> new ArrayList<>())
+                .add(reserva);
     }
+
 
     //Devuelve todas las reservas guardadas
     public Map<Integer, Reserva> getReservas() {
@@ -87,4 +96,22 @@ public class AlmacenMemoria {
         if (usuariosPorId.isEmpty()) return null;
         return usuariosPorId.values().iterator().next();
     }
+
+    public List<Reserva> reservasDePistaEnFecha(int idPista, LocalDate fecha) {
+        return reservasPorPista.getOrDefault(idPista, List.of()).stream()
+                .filter(r -> r.getEstado() == EstadoReserva.ACTIVA)
+                .filter(r -> fecha.equals(r.getFechaReserva()))
+                .sorted(Comparator.comparing(Reserva::getHoraInicio))
+                .collect(Collectors.toList());
+    }
+    public boolean haySolape(int idPista, LocalDate fecha, LocalTime inicio, LocalTime fin) {
+        for (Reserva r : reservasDePistaEnFecha(idPista, fecha)) {
+            LocalTime a = r.getHoraInicio();
+            LocalTime b = r.getHoraFin();
+            // solape si [inicio,fin) intersecta [a,b)
+            if (inicio.isBefore(b) && fin.isAfter(a)) return true;
+        }
+        return false;
+    }
+
 }

@@ -47,7 +47,7 @@ public class PistaController {
         if (nueva == null
                 || nueva.getNombre() == null || nueva.getNombre().isBlank()
                 || nueva.getUbicacion() == null || nueva.getUbicacion().isBlank()
-                || nueva.getFechaAta() == null) {
+                || nueva.getFechaAlta() == null) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Datos inválidos");
         }
 
@@ -104,8 +104,8 @@ public class PistaController {
         }
 
         // fecha (si viene)
-        if (cambios.getFechaAta() != null) {
-            actual.setFechaAta(cambios.getFechaAta());
+        if (cambios.getFechaAlta() != null) {
+            actual.setFechaAlta(cambios.getFechaAlta());
         }
 
         // activa: al ser boolean, aquí lo aplicamos siempre (simple)

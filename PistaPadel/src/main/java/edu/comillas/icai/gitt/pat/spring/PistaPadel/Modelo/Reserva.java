@@ -6,14 +6,13 @@ import java.time.LocalTime;
 
 public class Reserva {
 
-
     private Integer idReserva;
-    private Integer idUsuario ;
-    private Integer idPista ;
+    private Integer idUsuario;
+    private Integer idPista;
     private LocalDate fechaReserva;
     private LocalTime horaInicio;
-    private LocalTime horaFin;;
-    private int duracionMinutosa;
+    private LocalTime horaFin;
+    private int duracionMinutos;
     private EstadoReserva estado;
     private LocalDateTime fechaCreacion;
 
@@ -21,87 +20,37 @@ public class Reserva {
                    LocalDate fechaReserva, LocalTime horaInicio,
                    int duracionMinutos, EstadoReserva estado,
                    LocalDateTime fechaCreacion) {
-        this.idReserva = this.idReserva;
-        this.idUsuario = this.idUsuario;
-        this.idPista = this.idPista;
-        this.fechaReserva = this.fechaReserva;
-        this.horaInicio = this.horaInicio;
-        this.horaFin = this.horaFin;
-        this.duracionMinutosa = this.duracionMinutosa;
-        this.estado = this.estado;
-        this.fechaCreacion = this.fechaCreacion;
 
-    }
-
-    public Integer getIdUsuario() {
-        return idUsuario;
-    }
-
-    public Integer getIdReserva() {
-        return idReserva;
-    }
-
-    public LocalDate getFechaReserva() {
-        return fechaReserva;
-    }
-
-    public Integer getIdPista() {
-        return idPista;
-    }
-
-    public LocalTime getHoraInicio() {
-        return horaInicio;
-    }
-
-    public int getDuracionMinutosa() {
-        return duracionMinutosa;
-    }
-
-    public EstadoReserva getEstado() {
-        return estado;
-    }
-
-    public LocalDateTime getFechaCreacion() {
-        return fechaCreacion;
-    }
-
-    public LocalTime getHoraFin() {
-        return horaFin;
-    }
-
-    public void setIdReserva(Integer idReserva) {
         this.idReserva = idReserva;
-    }
-
-    public void setIdUsuario(Integer idUsuario) {
         this.idUsuario = idUsuario;
-    }
-
-    public void setFechaReserva(LocalDate fechaReserva) {
+        this.idPista = idPista;
         this.fechaReserva = fechaReserva;
-    }
-
-    public void setDuracionMinutosa(int duracionMinutosa) {
-        this.duracionMinutosa = duracionMinutosa;
-    }
-
-    public void setFechaCreacion(LocalDateTime fechaCreacion) {
+        this.horaInicio = horaInicio;
+        this.duracionMinutos = duracionMinutos;
+        this.horaFin = (horaInicio != null) ? horaInicio.plusMinutes(duracionMinutos) : null;
+        this.estado = estado;
         this.fechaCreacion = fechaCreacion;
     }
 
-    public void setEstado(EstadoReserva estado) {
-        this.estado = estado;
-    }
+    public Integer getIdReserva() { return idReserva; }
+    public Integer getIdUsuario() { return idUsuario; }
+    public Integer getIdPista() { return idPista; }
+    public LocalDate getFechaReserva() { return fechaReserva; }
+    public LocalTime getHoraInicio() { return horaInicio; }
+    public LocalTime getHoraFin() { return horaFin; }
+    public int getDuracionMinutos() { return duracionMinutos; }
+    public EstadoReserva getEstado() { return estado; }
+    public LocalDateTime getFechaCreacion() { return fechaCreacion; }
 
-    public void setHoraFin(LocalTime horaFin) {
-        this.horaFin = horaFin;
-    }
+    public void setEstado(EstadoReserva estado) { this.estado = estado; }
 
     public void setHoraInicio(LocalTime horaInicio) {
         this.horaInicio = horaInicio;
+        this.horaFin = (horaInicio != null) ? horaInicio.plusMinutes(this.duracionMinutos) : null;
     }
 
-    public void setIdPista(Integer idPista) {
-        this.idPista = idPista;
+    public void setDuracionMinutos(int duracionMinutos) {
+        this.duracionMinutos = duracionMinutos;
+        this.horaFin = (this.horaInicio != null) ? this.horaInicio.plusMinutes(duracionMinutos) : null;
     }
 }
