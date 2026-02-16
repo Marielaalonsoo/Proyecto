@@ -2,10 +2,15 @@ package edu.comillas.icai.gitt.pat.spring.PistaPadel.Controlador;
 
 import edu.comillas.icai.gitt.pat.spring.PistaPadel.Almacen.AlmacenMemoria;
 import edu.comillas.icai.gitt.pat.spring.PistaPadel.Excepciones.ExcepcionDatosIncorrectos;
-import edu.comillas.icai.gitt.pat.spring.PistaPadel.Modelo.*;
+import edu.comillas.icai.gitt.pat.spring.PistaPadel.Modelo.ModeloLogin;
+import edu.comillas.icai.gitt.pat.spring.PistaPadel.Modelo.ModeloUsuario;
+import edu.comillas.icai.gitt.pat.spring.PistaPadel.Modelo.Rol;
+import edu.comillas.icai.gitt.pat.spring.PistaPadel.Modelo.Usuario;
 
 import jakarta.servlet.http.HttpSession;
 import jakarta.validation.Valid;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.BindingResult;
@@ -14,27 +19,18 @@ import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDateTime;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
-
 
 @RestController
 @RequestMapping("/pistaPadel/auth")
 public class AuthController {
 
-    private final AlmacenMemoria almacen = AlmacenMemoria.getAlmacen();
+    private static final Logger logger = LoggerFactory.getLogger(AuthController.class);
 
+    private final AlmacenMemoria almacen;
 
-    @ExceptionHandler(ExcepcionDatosIncorrectos.class)
-    @ResponseStatus(HttpStatus.BAD_REQUEST)
-    public List<ModeloCampoIncorrecto> datosIncorrectos(ExcepcionDatosIncorrectos ex) {
-        return ex.getErrores().stream().map(err ->
-                new ModeloCampoIncorrecto(
-                        err.getDefaultMessage(),
-                        err.getField(),
-                        err.getRejectedValue()
-                )
-        ).toList();
+    public AuthController(AlmacenMemoria almacen) {
+        this.almacen = almacen;
     }
 
     // 201 / 400 (validación) / 409 (email duplicado)
@@ -47,30 +43,30 @@ public class AuthController {
 
         String emailNorm = almacen.normalizarEmail(req.email());
 
-        // 409
-        if (almacen.idUsuarioPorEmail.containsKey(emailNorm)) {
+        if (almacen.buscarUsuarioPorEmail(emailNorm) != null) {
+            logger.info("Registro rechazado por email duplicado: {}", emailNorm);
             throw new ResponseStatusException(HttpStatus.CONFLICT);
         }
 
         Usuario u = new Usuario();
         u.setIdUsuario(almacen.generarIdUsuario());
+
         u.setNombre(req.nombre().trim());
+        u.setApellidos(req.apellidos() == null ? "" : req.apellidos().trim());
 
-        if (req.apellidos() == null) u.setApellidos("");
-        else u.setApellidos(req.apellidos().trim());
+        // guardamos el email ya normalizado para evitar duplicados raros
+        u.setEmail(emailNorm);
 
-        u.setEmail(req.email().trim());
         u.setPassword(req.password());
-
-        if (req.telefono() == null) u.setTelefono("");
-        else u.setTelefono(req.telefono().trim());
+        u.setTelefono(req.telefono() == null ? "" : req.telefono().trim());
 
         u.setRol(Rol.USER);
         u.setFechaRegistro(LocalDateTime.now());
         u.setActivo(true);
 
-        almacen.usuariosPorId.put(u.getIdUsuario(), u);
-        almacen.idUsuarioPorEmail.put(emailNorm, u.getIdUsuario());
+        almacen.guardarUsuario(u);
+
+        logger.info("Usuario registrado: id={}, email={}", u.getIdUsuario(), u.getEmail());
 
         Map<String, Object> res = new HashMap<>();
         res.put("idUsuario", u.getIdUsuario());
@@ -93,26 +89,16 @@ public class AuthController {
         }
 
         String emailNorm = almacen.normalizarEmail(req.email());
-        Integer id = almacen.idUsuarioPorEmail.get(emailNorm);
+        Usuario u = almacen.buscarUsuarioPorEmail(emailNorm);
 
-        if (id == null) {
-            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED);
-        }
-
-        Usuario u = almacen.usuariosPorId.get(id);
-        if (u == null) {
-            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED);
-        }
-
-        if (!u.isActivo()) {
-            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED);
-        }
-
-        if (!req.password().equals(u.getPassword())) {
+        if (u == null || !u.isActivo() || !req.password().equals(u.getPassword())) {
+            logger.info("Login fallido: {}", emailNorm);
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED);
         }
 
         session.setAttribute("idUsuario", u.getIdUsuario());
+        logger.info("Login correcto: id={}, email={}", u.getIdUsuario(), u.getEmail());
+
         return ResponseEntity.ok(Map.of("ok", true));
     }
 
@@ -121,18 +107,13 @@ public class AuthController {
     public ResponseEntity<?> me(HttpSession session) {
 
         Object idObj = session.getAttribute("idUsuario");
-        if (idObj == null) {
+        if (!(idObj instanceof Integer)) {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED);
         }
 
-        Integer id;
-        try {
-            id = (Integer) idObj;
-        } catch (Exception e) {
-            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED);
-        }
+        Integer id = (Integer) idObj;
+        Usuario u = almacen.buscarUsuarioPorId(id);
 
-        Usuario u = almacen.usuariosPorId.get(id);
         if (u == null) {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED);
         }
@@ -160,6 +141,8 @@ public class AuthController {
         }
 
         session.invalidate();
+        logger.info("Logout");
+
         return ResponseEntity.noContent().build();
     }
 }

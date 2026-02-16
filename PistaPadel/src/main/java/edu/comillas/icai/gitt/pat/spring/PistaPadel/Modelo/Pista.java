@@ -11,6 +11,8 @@ public class Pista {
     private boolean activa = true;
     private LocalDate fechaAlta;
 
+    public Pista() { }
+
     public Pista(Integer idPista, String nombre, String ubicacion, int precioHora, boolean activa, LocalDate fechaAlta) {
         this.idPista = idPista;
         this.nombre = nombre;
