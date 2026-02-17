@@ -12,6 +12,6 @@ public class ManejadorErroresGlobales {
     @ResponseBody
     @ExceptionHandler(ResponseStatusException.class)
     public ResponseEntity<?> errorLanzado(ResponseStatusException ex) {
-        return ResponseEntity.status(ex.getStatusCode()).build();
+        return new ResponseEntity<>(ex.getStatusCode());
     }
 }

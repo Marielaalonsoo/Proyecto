@@ -17,12 +17,10 @@ public class AlmacenMemoria {
 
     private static final Logger logger = LoggerFactory.getLogger(AlmacenMemoria.class);
 
-    // Contadores simples (suficiente para entrega 1)
     private int nextUsuarioId = 1;
     private int nextPistaId = 1;
     private int nextReservaId = 1;
 
-    // Datos en memoria (encapsulados)
     private final Map<Integer, Usuario> usuariosPorId = new HashMap<>();
     private final Map<String, Integer> idUsuarioPorEmail = new HashMap<>();
 
@@ -33,23 +31,9 @@ public class AlmacenMemoria {
     private final Map<Integer, List<Reserva>> reservasPorPista = new HashMap<>();
 
     // ----- IDs -----
-    public int generarIdUsuario() {
-        int id = nextUsuarioId;
-        nextUsuarioId++;
-        return id;
-    }
-
-    public int generarIdPista() {
-        int id = nextPistaId;
-        nextPistaId++;
-        return id;
-    }
-
-    public int generarIdReserva() {
-        int id = nextReservaId;
-        nextReservaId++;
-        return id;
-    }
+    public int generarIdUsuario() { return nextUsuarioId++; }
+    public int generarIdPista() { return nextPistaId++; }
+    public int generarIdReserva() { return nextReservaId++; }
 
     // ----- Normalización -----
     public String normalizarEmail(String email) {
@@ -63,9 +47,7 @@ public class AlmacenMemoria {
     }
 
     // ----- Usuarios -----
-    public Usuario buscarUsuarioPorId(Integer id) {
-        return usuariosPorId.get(id);
-    }
+    public Usuario buscarUsuarioPorId(Integer id) { return usuariosPorId.get(id); }
 
     public Usuario buscarUsuarioPorEmail(String email) {
         String key = normalizarEmail(email);
@@ -79,14 +61,10 @@ public class AlmacenMemoria {
         logger.debug("Usuario guardado: id={}", usuario.getIdUsuario());
     }
 
-    public Collection<Usuario> listarUsuarios() {
-        return usuariosPorId.values();
-    }
+    public Collection<Usuario> listarUsuarios() { return usuariosPorId.values(); }
 
     // ----- Pistas -----
-    public Pista buscarPista(Integer id) {
-        return pistasPorId.get(id);
-    }
+    public Pista buscarPista(Integer id) { return pistasPorId.get(id); }
 
     public Pista buscarPistaPorNombre(String nombre) {
         String key = normalizarNombre(nombre);
@@ -100,58 +78,49 @@ public class AlmacenMemoria {
         logger.debug("Pista guardada: id={}", pista.getIdPista());
     }
 
-    public Collection<Pista> listarPistas() {
-        return pistasPorId.values();
-    }
+    public Collection<Pista> listarPistas() { return pistasPorId.values(); }
+
     public boolean eliminarPista(int idPista) {
         Pista p = pistasPorId.remove(idPista);
-        if (p == null) {
-            return false;
-        }
-        String nombreNorm = normalizarNombre(p.getNombre());
-        idPistaPorNombre.remove(nombreNorm);
+        if (p == null) return false;
+        idPistaPorNombre.remove(normalizarNombre(p.getNombre()));
         return true;
     }
-
 
     // ----- Reservas -----
     public void guardarReserva(Reserva reserva) {
         reservasPorId.put(reserva.getIdReserva(), reserva);
-
-        List<Reserva> lista = reservasPorPista.get(reserva.getIdPista());
-        if (lista == null) {
-            lista = new ArrayList<>();
-            reservasPorPista.put(reserva.getIdPista(), lista);
-        }
-        lista.add(reserva);
-
+        reservasPorPista.computeIfAbsent(reserva.getIdPista(), k -> new ArrayList<>()).add(reserva);
         logger.debug("Reserva guardada: id={}, pista={}", reserva.getIdReserva(), reserva.getIdPista());
     }
 
-    public Reserva buscarReservaPorId(Integer id) {
-        return reservasPorId.get(id);
-    }
+    public Reserva buscarReservaPorId(Integer id) { return reservasPorId.get(id); }
 
-    public Collection<Reserva> listarReservas() {
-        return reservasPorId.values();
+    public Collection<Reserva> listarReservas() { return reservasPorId.values(); }
+
+    public void actualizarReserva(Reserva reserva, int oldPistaId) {
+        reservasPorId.put(reserva.getIdReserva(), reserva);
+
+        if (oldPistaId != reserva.getIdPista()) {
+            List<Reserva> oldList = reservasPorPista.get(oldPistaId);
+            if (oldList != null) {
+                oldList.removeIf(r -> r.getIdReserva().equals(reserva.getIdReserva()));
+            }
+            reservasPorPista.computeIfAbsent(reserva.getIdPista(), k -> new ArrayList<>()).add(reserva);
+        }
+
+        logger.debug("Reserva actualizada: id={}, pista(old->new)={}->{}",
+                reserva.getIdReserva(), oldPistaId, reserva.getIdPista());
     }
 
     public List<Reserva> reservasDePistaEnFecha(int idPista, LocalDate fecha) {
-
         List<Reserva> reservasDeEsaPista = reservasPorPista.get(idPista);
-        if (reservasDeEsaPista == null) {
-            return List.of();
-        }
+        if (reservasDeEsaPista == null) return List.of();
 
         List<Reserva> resultado = new ArrayList<>();
-
         for (Reserva r : reservasDeEsaPista) {
-            if (r.getEstado() != EstadoReserva.ACTIVA) {
-                continue;
-            }
-            if (!fecha.equals(r.getFechaReserva())) {
-                continue;
-            }
+            if (r.getEstado() != EstadoReserva.ACTIVA) continue;
+            if (!fecha.equals(r.getFechaReserva())) continue;
             resultado.add(r);
         }
 
@@ -159,27 +128,21 @@ public class AlmacenMemoria {
         return resultado;
     }
 
+    // Solape real (no solo “misma hora exacta”)
     public boolean haySolape(int idPista, LocalDate fecha, LocalTime inicio, LocalTime fin) {
-
-        List<Reserva> reservas = reservasDePistaEnFecha(idPista, fecha);
-
-        for (Reserva r : reservas) {
-            LocalTime inicioExistente = r.getHoraInicio();
-            LocalTime finExistente = r.getHoraFin();
-
-            // Si la nueva reserva empieza antes de que acabe una existente
-            // y además termina después de que esa existente haya empezado -> se pisan
-            boolean sePisan = inicio.isBefore(finExistente) && fin.isAfter(inicioExistente);
-
-            if (sePisan) {
-                return true;
-            }
+        for (Reserva r : reservasDePistaEnFecha(idPista, fecha)) {
+            boolean sePisan = inicio.isBefore(r.getHoraFin()) && fin.isAfter(r.getHoraInicio());
+            if (sePisan) return true;
         }
-
         return false;
     }
 
-    // ----- Compatibilidad temporal -----
-
-
+    public boolean haySolapeExcluyendo(int idReservaExcluir, int idPista, LocalDate fecha, LocalTime inicio, LocalTime fin) {
+        for (Reserva r : reservasDePistaEnFecha(idPista, fecha)) {
+            if (r.getIdReserva().equals(idReservaExcluir)) continue;
+            boolean sePisan = inicio.isBefore(r.getHoraFin()) && fin.isAfter(r.getHoraInicio());
+            if (sePisan) return true;
+        }
+        return false;
+    }
 }

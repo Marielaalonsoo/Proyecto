@@ -44,6 +44,11 @@ public class Reserva {
 
     public void setEstado(EstadoReserva estado) { this.estado = estado; }
 
+    // Necesarios para PATCH (reprogramar)
+    public void setIdPista(Integer idPista) { this.idPista = idPista; }
+
+    public void setFechaReserva(LocalDate fechaReserva) { this.fechaReserva = fechaReserva; }
+
     public void setHoraInicio(LocalTime horaInicio) {
         this.horaInicio = horaInicio;
         this.horaFin = (horaInicio != null) ? horaInicio.plusMinutes(this.duracionMinutos) : null;
