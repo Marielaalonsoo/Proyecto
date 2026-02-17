@@ -36,8 +36,8 @@ public class ConfiguracionSeguridad {
     public UserDetailsService usuarios() {
 
         UserDetails user = User.withDefaultPasswordEncoder()
-                .username("usuario")
-                .password("clave")
+                .username("user")
+                .password("user")
                 .roles("USER")
                 .build();
 
