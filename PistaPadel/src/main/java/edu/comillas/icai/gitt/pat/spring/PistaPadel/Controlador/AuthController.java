@@ -99,6 +99,7 @@ public class AuthController {
         res.put("telefono", u.getTelefono());
         res.put("rol", u.getRol().toString());
         res.put("activo", u.isActivo());
+        res.put("fechaRegistro", u.getFechaRegistro());
 
         return ResponseEntity.status(HttpStatus.CREATED).body(res);
     }
