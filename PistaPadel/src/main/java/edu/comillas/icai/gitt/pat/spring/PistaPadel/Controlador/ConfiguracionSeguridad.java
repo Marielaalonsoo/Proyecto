@@ -20,7 +20,8 @@ public class ConfiguracionSeguridad {
     @Bean
     public SecurityFilterChain configuracion(HttpSecurity http) throws Exception {
 
-        http.authorizeHttpRequests(authorize -> authorize
+        http.authorizeHttpRequests(auth -> auth
+                .requestMatchers("/pistaPadel/health").permitAll()
                 .anyRequest().authenticated()
         );
 
