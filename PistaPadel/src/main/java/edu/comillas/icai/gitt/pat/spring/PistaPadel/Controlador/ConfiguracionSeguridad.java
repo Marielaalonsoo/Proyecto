@@ -20,11 +20,14 @@ public class ConfiguracionSeguridad {
     @Bean
     public SecurityFilterChain configuracion(HttpSecurity http) throws Exception {
 
-        http.authorizeHttpRequests(authorize -> authorize
+        // Tanto register como health sin autenticación
+        http.authorizeHttpRequests(auth -> auth
+                .requestMatchers("/pistaPadel/health", "/pistaPadel/auth/register").permitAll()
                 .anyRequest().authenticated()
         );
 
-        http.formLogin(Customizer.withDefaults());
+        // http.formLogin(Customizer.withDefaults());  No redirige (302), sin esto acceso con Basic Auth
+        // y si no estás autentucado 401 Unauthorized (solo entrega 1 en principio)
         http.httpBasic(Customizer.withDefaults());
 
         http.csrf(csrf -> csrf.ignoringRequestMatchers("/pistaPadel/**"));
@@ -35,15 +38,15 @@ public class ConfiguracionSeguridad {
     @Bean
     public UserDetailsService usuarios() {
 
-        UserDetails user = User.withDefaultPasswordEncoder()
-                .username("user")
-                .password("user")
+        // noop sirve para decirle a Spring que la contraseña no está encriptada, es literalmente lo que pone
+        // withDefaultPasswordEncoder() nos daba warning, se lo tragaba pero warning
+        UserDetails user = User.withUsername("user")
+                .password("{noop}user")
                 .roles("USER")
                 .build();
 
-        UserDetails admin = User.withDefaultPasswordEncoder()
-                .username("admin")
-                .password("admin")
+        UserDetails admin = User.withUsername("admin")
+                .password("{noop}admin")
                 .roles("ADMIN")
                 .build();
 
