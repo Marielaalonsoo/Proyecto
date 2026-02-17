@@ -21,16 +21,17 @@ public class Reserva {
                    LocalDate fechaReserva, LocalTime horaInicio,
                    int duracionMinutos, EstadoReserva estado,
                    LocalDateTime fechaCreacion) {
-        this.idReserva = this.idReserva;
-        this.idUsuario = this.idUsuario;
-        this.idPista = this.idPista;
-        this.fechaReserva = this.fechaReserva;
-        this.horaInicio = this.horaInicio;
-        this.horaFin = this.horaFin;
-        this.duracionMinutosa = this.duracionMinutosa;
-        this.estado = this.estado;
-        this.fechaCreacion = this.fechaCreacion;
-
+        // corregido,  Asignar el parámetro (derecha) al atributo (izquierda)
+        this.idReserva = idReserva;
+        this.idUsuario = idUsuario;
+        this.idPista = idPista;
+        this.fechaReserva = fechaReserva;
+        this.horaInicio = horaInicio;
+        // calcula la horaFin automáticamente
+        this.duracionMinutosa = duracionMinutos;
+        this.horaFin = horaInicio.plusMinutes(duracionMinutos);
+        this.estado = estado;
+        this.fechaCreacion = fechaCreacion;
     }
 
     public Integer getIdUsuario() {
