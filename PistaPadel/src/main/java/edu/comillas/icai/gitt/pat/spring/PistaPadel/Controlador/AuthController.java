@@ -12,7 +12,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
@@ -85,7 +84,7 @@ public class AuthController {
         u.setNombre(req.nombre().trim());
         u.setApellidos(req.apellidos() == null ? "" : req.apellidos().trim());
         u.setEmail(emailNorm);
-        u.setPassword(req.password()); // se guarda por si queréis usarlo más adelante
+        u.setPassword(req.password()); // Se guarda para más adelante
         u.setTelefono(req.telefono() == null ? "" : req.telefono().trim());
         u.setRol(Rol.USER);
         u.setFechaRegistro(LocalDateTime.now());
@@ -106,8 +105,9 @@ public class AuthController {
         return ResponseEntity.status(HttpStatus.CREATED).body(res);
     }
 
+    // Autentificación no muy clara todavía. Spring autentica antes de entrar al controller,
+    // así que aquí solo se valida el JSON y devuelve ok.
     // 200 / 400 / 401
-    // En seguridad de teoría, quien autentica es Spring. Aquí devolvemos ok y listo.
     @PostMapping("/login")
     public ResponseEntity<?> login(@Valid @RequestBody ModeloLogin req,
                                    BindingResult result,
@@ -121,7 +121,7 @@ public class AuthController {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED);
         }
 
-        // Asegura que el usuario exista en memoria (entrega 1)
+        // Asegura que el usuario existe
         Usuario u = getUsuarioAutenticado(principal);
 
         logger.info("Login (Spring Security): userId={}, name={}", u.getIdUsuario(), principal.getName());
@@ -148,7 +148,7 @@ public class AuthController {
     }
 
     // 204 / 401
-    // En Basic Auth no hay sesión que invalidar; si estás autenticado, devolvemos 204.
+    // Si ya estás autenticado, devuelve 204.
     @PostMapping("/logout")
     public ResponseEntity<?> logout(Principal principal) {
 
