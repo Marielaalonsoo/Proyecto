@@ -2,42 +2,68 @@ package edu.comillas.icai.gitt.pat.spring.PistaPadel.Controlador;
 
 import edu.comillas.icai.gitt.pat.spring.PistaPadel.Almacen.AlmacenMemoria;
 import edu.comillas.icai.gitt.pat.spring.PistaPadel.Excepciones.ExcepcionDatosIncorrectos;
-import edu.comillas.icai.gitt.pat.spring.PistaPadel.Modelo.*;
+import edu.comillas.icai.gitt.pat.spring.PistaPadel.Modelo.ModeloLogin;
+import edu.comillas.icai.gitt.pat.spring.PistaPadel.Modelo.ModeloUsuario;
+import edu.comillas.icai.gitt.pat.spring.PistaPadel.Modelo.Rol;
+import edu.comillas.icai.gitt.pat.spring.PistaPadel.Modelo.Usuario;
 
-import jakarta.servlet.http.HttpSession;
 import jakarta.validation.Valid;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.security.Principal;
 import java.time.LocalDateTime;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
-
 
 @RestController
 @RequestMapping("/pistaPadel/auth")
 public class AuthController {
 
-    private final AlmacenMemoria almacen = AlmacenMemoria.getAlmacen();
+    private static final Logger logger = LoggerFactory.getLogger(AuthController.class);
 
-    // 400
-    @ExceptionHandler(ExcepcionDatosIncorrectos.class)
-    @ResponseStatus(HttpStatus.BAD_REQUEST)
-    public List<ModeloCampoIncorrecto> datosIncorrectos(ExcepcionDatosIncorrectos ex) {
-        return ex.getErrores().stream().map(err ->
-                new ModeloCampoIncorrecto(
-                        err.getDefaultMessage(),
-                        err.getField(),
-                        err.getRejectedValue()
-                )
-        ).toList();
+    private final AlmacenMemoria almacen;
+
+    public AuthController(AlmacenMemoria almacen) {
+        this.almacen = almacen;
     }
 
-    // 201 / 400 (validación) / 409 (email duplicado)
+    private Usuario getUsuarioAutenticado(Principal principal) {
+        if (principal == null || principal.getName() == null) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED);
+        }
+
+        String username = principal.getName().trim();
+        if (username.isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED);
+        }
+
+        String emailNorm = almacen.normalizarEmail(username);
+
+        Usuario u = almacen.buscarUsuarioPorEmail(emailNorm);
+        if (u != null) return u;
+
+        Usuario nuevo = new Usuario();
+        nuevo.setIdUsuario(almacen.generarIdUsuario());
+        nuevo.setNombre(username);
+        nuevo.setApellidos("");
+        nuevo.setEmail(emailNorm);
+        nuevo.setPassword("");
+        nuevo.setTelefono("");
+        nuevo.setRol("admin".equalsIgnoreCase(username) ? Rol.ADMIN : Rol.USER);
+        nuevo.setFechaRegistro(LocalDateTime.now());
+        nuevo.setActivo(true);
+
+        almacen.guardarUsuario(nuevo);
+        return nuevo;
+    }
+
+    // 201 / 400 / 409
     @PostMapping("/register")
     public ResponseEntity<?> register(@Valid @RequestBody ModeloUsuario req, BindingResult result) {
 
@@ -47,30 +73,23 @@ public class AuthController {
 
         String emailNorm = almacen.normalizarEmail(req.email());
 
-        // 409
-        if (almacen.idUsuarioPorEmail.containsKey(emailNorm)) {
+        if (almacen.buscarUsuarioPorEmail(emailNorm) != null) {
+            logger.info("Registro rechazado por email duplicado: {}", emailNorm);
             throw new ResponseStatusException(HttpStatus.CONFLICT);
         }
 
         Usuario u = new Usuario();
         u.setIdUsuario(almacen.generarIdUsuario());
         u.setNombre(req.nombre().trim());
-
-        if (req.apellidos() == null) u.setApellidos("");
-        else u.setApellidos(req.apellidos().trim());
-
-        u.setEmail(req.email().trim());
-        u.setPassword(req.password());
-
-        if (req.telefono() == null) u.setTelefono("");
-        else u.setTelefono(req.telefono().trim());
-
+        u.setApellidos(req.apellidos() == null ? "" : req.apellidos().trim());
+        u.setEmail(emailNorm);
+        u.setPassword(req.password()); // se guarda por si queréis usarlo más adelante
+        u.setTelefono(req.telefono() == null ? "" : req.telefono().trim());
         u.setRol(Rol.USER);
         u.setFechaRegistro(LocalDateTime.now());
         u.setActivo(true);
 
-        almacen.usuariosPorId.put(u.getIdUsuario(), u);
-        almacen.idUsuarioPorEmail.put(emailNorm, u.getIdUsuario());
+        almacen.guardarUsuario(u);
 
         Map<String, Object> res = new HashMap<>();
         res.put("idUsuario", u.getIdUsuario());
@@ -84,58 +103,33 @@ public class AuthController {
         return ResponseEntity.status(HttpStatus.CREATED).body(res);
     }
 
-    // 200 / 400 (validación) / 401 (credenciales)
+    // 200 / 400 / 401
+    // En seguridad de teoría, quien autentica es Spring. Aquí devolvemos ok y listo.
     @PostMapping("/login")
-    public ResponseEntity<?> login(@Valid @RequestBody ModeloLogin req, BindingResult result, HttpSession session) {
+    public ResponseEntity<?> login(@Valid @RequestBody ModeloLogin req,
+                                   BindingResult result,
+                                   Principal principal) {
 
         if (result.hasErrors()) {
             throw new ExcepcionDatosIncorrectos(result);
         }
 
-        String emailNorm = almacen.normalizarEmail(req.email());
-        Integer id = almacen.idUsuarioPorEmail.get(emailNorm);
-
-        if (id == null) {
+        if (principal == null) {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED);
         }
 
-        Usuario u = almacen.usuariosPorId.get(id);
-        if (u == null) {
-            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED);
-        }
+        // Asegura que el usuario exista en memoria (entrega 1)
+        Usuario u = getUsuarioAutenticado(principal);
 
-        if (!u.isActivo()) {
-            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED);
-        }
-
-        if (!req.password().equals(u.getPassword())) {
-            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED);
-        }
-
-        session.setAttribute("idUsuario", u.getIdUsuario());
+        logger.info("Login (Spring Security): userId={}, name={}", u.getIdUsuario(), principal.getName());
         return ResponseEntity.ok(Map.of("ok", true));
     }
 
     // 200 / 401
     @GetMapping("/me")
-    public ResponseEntity<?> me(HttpSession session) {
+    public ResponseEntity<?> me(Principal principal) {
 
-        Object idObj = session.getAttribute("idUsuario");
-        if (idObj == null) {
-            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED);
-        }
-
-        Integer id;
-        try {
-            id = (Integer) idObj;
-        } catch (Exception e) {
-            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED);
-        }
-
-        Usuario u = almacen.usuariosPorId.get(id);
-        if (u == null) {
-            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED);
-        }
+        Usuario u = getUsuarioAutenticado(principal);
 
         Map<String, Object> res = new HashMap<>();
         res.put("idUsuario", u.getIdUsuario());
@@ -151,15 +145,15 @@ public class AuthController {
     }
 
     // 204 / 401
+    // En Basic Auth no hay sesión que invalidar; si estás autenticado, devolvemos 204.
     @PostMapping("/logout")
-    public ResponseEntity<?> logout(HttpSession session) {
+    public ResponseEntity<?> logout(Principal principal) {
 
-        Object idObj = session.getAttribute("idUsuario");
-        if (idObj == null) {
+        if (principal == null) {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED);
         }
 
-        session.invalidate();
+        logger.info("Logout (sin sesión): {}", principal.getName());
         return ResponseEntity.noContent().build();
     }
 }
