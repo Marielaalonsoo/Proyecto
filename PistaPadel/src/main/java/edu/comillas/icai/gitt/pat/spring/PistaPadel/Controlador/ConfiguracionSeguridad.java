@@ -21,13 +21,11 @@ public class ConfiguracionSeguridad {
     public SecurityFilterChain configuracion(HttpSecurity http) throws Exception {
 
         http.authorizeHttpRequests(authorize -> authorize
-                .requestMatchers("/pistaPadel/health").permitAll()
                 .anyRequest().authenticated()
         );
 
-        // Para API: mejor Basic (evita redirects 302 de formLogin)
+        http.formLogin(Customizer.withDefaults());
         http.httpBasic(Customizer.withDefaults());
-        http.formLogin(form -> form.disable());
 
         http.csrf(csrf -> csrf.ignoringRequestMatchers("/pistaPadel/**"));
 
