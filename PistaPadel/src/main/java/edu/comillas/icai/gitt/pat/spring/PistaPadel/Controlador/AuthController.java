@@ -30,9 +30,7 @@ public class AuthController {
 
     private final AlmacenMemoria almacen;
 
-    public AuthController(AlmacenMemoria almacen) {
-        this.almacen = almacen;
-    }
+    public AuthController(AlmacenMemoria almacen) {this.almacen = almacen;}
 
     private Usuario getUsuarioAutenticado(Principal principal) {
         if (principal == null || principal.getName() == null) {
@@ -47,7 +45,10 @@ public class AuthController {
         String emailNorm = almacen.normalizarEmail(username);
 
         Usuario u = almacen.buscarUsuarioPorEmail(emailNorm);
-        if (u != null) return u;
+        if (u != null) {
+            if(!u.isActivo()) throw new ResponseStatusException(HttpStatus.UNAUTHORIZED);
+            return u;
+        }
 
         Usuario nuevo = new Usuario();
         nuevo.setIdUsuario(almacen.generarIdUsuario());
