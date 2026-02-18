@@ -9,9 +9,8 @@ import org.springframework.web.server.ResponseStatusException;
 @RestControllerAdvice
 public class ManejadorErroresGlobales {
 
-    @ResponseBody
     @ExceptionHandler(ResponseStatusException.class)
     public ResponseEntity<?> errorLanzado(ResponseStatusException ex) {
-        return new ResponseEntity<>(ex.getStatusCode());
+        return ResponseEntity.status(ex.getStatusCode()).body(ex.getReason()); // Explica el error
     }
 }
