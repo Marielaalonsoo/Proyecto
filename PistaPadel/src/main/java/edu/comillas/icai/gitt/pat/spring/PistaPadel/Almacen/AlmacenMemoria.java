@@ -30,12 +30,12 @@ public class AlmacenMemoria {
     private final Map<Integer, Reserva> reservasPorId = new HashMap<>();
     private final Map<Integer, List<Reserva>> reservasPorPista = new HashMap<>();
 
-    // ----- IDs -----
+    // Generación de IDs
     public int generarIdUsuario() { return nextUsuarioId++; }
     public int generarIdPista() { return nextPistaId++; }
     public int generarIdReserva() { return nextReservaId++; }
 
-    // ----- Normalización -----
+    // Normalización de email y nombre (minúsculas)
     public String normalizarEmail(String email) {
         if (email == null) return null;
         return email.trim().toLowerCase();
@@ -46,7 +46,7 @@ public class AlmacenMemoria {
         return nombre.trim().toLowerCase();
     }
 
-    // ----- Usuarios -----
+    // Acciones de usuarios
     public Usuario buscarUsuarioPorId(Integer id) { return usuariosPorId.get(id); }
 
     public Usuario buscarUsuarioPorEmail(String email) {
@@ -61,9 +61,17 @@ public class AlmacenMemoria {
         logger.debug("Usuario guardado: id={}", usuario.getIdUsuario());
     }
 
+    // Mantener índice email consistente al cambiar email
+    public void actualizarEmailUsuario(Usuario usuario, String oldEmail) {
+        if (oldEmail != null) {
+            idUsuarioPorEmail.remove(normalizarEmail(oldEmail));
+        }
+        guardarUsuario(usuario);
+    }
+
     public Collection<Usuario> listarUsuarios() { return usuariosPorId.values(); }
 
-    // ----- Pistas -----
+    // Acciones de pistas
     public Pista buscarPista(Integer id) { return pistasPorId.get(id); }
 
     public Pista buscarPistaPorNombre(String nombre) {
@@ -84,10 +92,19 @@ public class AlmacenMemoria {
         Pista p = pistasPorId.remove(idPista);
         if (p == null) return false;
         idPistaPorNombre.remove(normalizarNombre(p.getNombre()));
+        reservasPorPista.remove(idPista);
         return true;
     }
 
-    // ----- Reservas -----
+    // Mantener índice nombre consistente al cambiar nombre de pista
+    public void actualizarNombrePista(Pista pista, String oldNombre) {
+        if (oldNombre != null) {
+            idPistaPorNombre.remove(normalizarNombre(oldNombre));
+        }
+        guardarPista(pista);
+    }
+
+    // Acciones con reservas
     public void guardarReserva(Reserva reserva) {
         reservasPorId.put(reserva.getIdReserva(), reserva);
         reservasPorPista.computeIfAbsent(reserva.getIdPista(), k -> new ArrayList<>()).add(reserva);
@@ -128,7 +145,7 @@ public class AlmacenMemoria {
         return resultado;
     }
 
-    // Solape real (no solo “misma hora exacta”)
+    // Solape de pistas
     public boolean haySolape(int idPista, LocalDate fecha, LocalTime inicio, LocalTime fin) {
         for (Reserva r : reservasDePistaEnFecha(idPista, fecha)) {
             boolean sePisan = inicio.isBefore(r.getHoraFin()) && fin.isAfter(r.getHoraInicio());

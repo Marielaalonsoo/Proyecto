@@ -11,4 +11,4 @@ public record ModeloReserva(
         @NotNull LocalDate date,
         @NotNull LocalTime time,
         @NotNull @Positive Integer durationMinutes
-) { }
+) {}

@@ -50,7 +50,7 @@ public class UserController {
             return u;
         }
 
-        // Entrega 1: si no existe, lo creamos para que el sistema sea usable
+        // Se crea para que el sistema sea usable (solo entrega 1)
         Usuario nuevo = new Usuario();
         nuevo.setIdUsuario(almacen.generarIdUsuario());
         nuevo.setNombre(username);
@@ -66,9 +66,8 @@ public class UserController {
         return nuevo;
     }
 
-    private boolean esAdmin(Principal principal) {
-        // Para entrega 1: el admin de teoría se llama "admin"
-        return principal != null && "admin".equalsIgnoreCase(principal.getName());
+    private boolean esAdmin(Usuario u) {
+        return u.getRol() == Rol.ADMIN;
     }
 
     private Map<String, Object> limpiar(Usuario u) {
@@ -89,9 +88,7 @@ public class UserController {
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<?> getUsers(Principal principal) {
 
-        // Para que el "admin" exista también en memoria (si alguien lo lista el primero)
-        Usuario admin = getUsuarioAutenticado(principal);
-        admin.setRol(Rol.ADMIN);
+        Usuario actual = getUsuarioAutenticado(principal);
 
         List<Usuario> todos = new ArrayList<>(almacen.listarUsuarios());
         todos.sort(Comparator.comparing(Usuario::getIdUsuario));
@@ -111,7 +108,7 @@ public class UserController {
 
         Usuario actual = getUsuarioAutenticado(principal);
 
-        boolean admin = esAdmin(principal);
+        boolean admin = esAdmin(actual);
         boolean dueno = actual.getIdUsuario().equals(userId);
 
         if (!admin && !dueno) {
@@ -139,7 +136,7 @@ public class UserController {
 
         Usuario actual = getUsuarioAutenticado(principal);
 
-        boolean admin = esAdmin(principal);
+        boolean admin = esAdmin(actual);
         boolean dueno = actual.getIdUsuario().equals(userId);
 
         if (!admin && !dueno) {
@@ -169,6 +166,7 @@ public class UserController {
 
         if (req.email() != null) {
             String nuevoNorm = almacen.normalizarEmail(req.email());
+            String oldEmail = x.getEmail();
             String actualNorm = almacen.normalizarEmail(x.getEmail());
 
             if (!nuevoNorm.equals(actualNorm)) {
@@ -177,6 +175,7 @@ public class UserController {
                     throw new ResponseStatusException(HttpStatus.CONFLICT);
                 }
                 x.setEmail(nuevoNorm);
+                almacen.actualizarEmailUsuario(x, oldEmail);
             }
         }
 

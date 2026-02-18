@@ -29,9 +29,7 @@ public class AuthController {
 
     private final AlmacenMemoria almacen;
 
-    public AuthController(AlmacenMemoria almacen) {
-        this.almacen = almacen;
-    }
+    public AuthController(AlmacenMemoria almacen) {this.almacen = almacen;}
 
     private Usuario getUsuarioAutenticado(Principal principal) {
         if (principal == null || principal.getName() == null) {
@@ -46,7 +44,10 @@ public class AuthController {
         String emailNorm = almacen.normalizarEmail(username);
 
         Usuario u = almacen.buscarUsuarioPorEmail(emailNorm);
-        if (u != null) return u;
+        if (u != null) {
+            if(!u.isActivo()) throw new ResponseStatusException(HttpStatus.UNAUTHORIZED);
+            return u;
+        }
 
         Usuario nuevo = new Usuario();
         nuevo.setIdUsuario(almacen.generarIdUsuario());
@@ -83,7 +84,7 @@ public class AuthController {
         u.setNombre(req.nombre().trim());
         u.setApellidos(req.apellidos() == null ? "" : req.apellidos().trim());
         u.setEmail(emailNorm);
-        u.setPassword(req.password()); // se guarda por si queréis usarlo más adelante
+        u.setPassword(req.password()); // Se guarda para más adelante
         u.setTelefono(req.telefono() == null ? "" : req.telefono().trim());
         u.setRol(Rol.USER);
         u.setFechaRegistro(LocalDateTime.now());
@@ -99,12 +100,14 @@ public class AuthController {
         res.put("telefono", u.getTelefono());
         res.put("rol", u.getRol().toString());
         res.put("activo", u.isActivo());
+        res.put("fechaRegistro", u.getFechaRegistro());
 
         return ResponseEntity.status(HttpStatus.CREATED).body(res);
     }
 
+    // Autentificación no muy clara todavía. Spring autentica antes de entrar al controller,
+    // así que aquí solo se valida el JSON y devuelve ok.
     // 200 / 400 / 401
-    // En seguridad de teoría, quien autentica es Spring. Aquí devolvemos ok y listo.
     @PostMapping("/login")
     public ResponseEntity<?> login(@Valid @RequestBody ModeloLogin req,
                                    BindingResult result,
@@ -118,7 +121,7 @@ public class AuthController {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED);
         }
 
-        // Asegura que el usuario exista en memoria (entrega 1)
+        // Asegura que el usuario existe
         Usuario u = getUsuarioAutenticado(principal);
 
         logger.info("Login (Spring Security): userId={}, name={}", u.getIdUsuario(), principal.getName());
@@ -145,7 +148,7 @@ public class AuthController {
     }
 
     // 204 / 401
-    // En Basic Auth no hay sesión que invalidar; si estás autenticado, devolvemos 204.
+    // Si ya estás autenticado, devuelve 204.
     @PostMapping("/logout")
     public ResponseEntity<?> logout(Principal principal) {
 
