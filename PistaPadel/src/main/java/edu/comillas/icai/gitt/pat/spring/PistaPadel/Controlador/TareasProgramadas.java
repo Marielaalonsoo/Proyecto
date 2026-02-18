@@ -10,13 +10,13 @@ public class TareasProgramadas {
 
     private static final Logger logger = LoggerFactory.getLogger(TareasProgramadas.class);
 
-    // Diario a las 2:00 (simulación)
+    // Recordatorio diario a las 2:00
     @Scheduled(cron = "0 0 2 * * *")
     public void recordatorios2AM() {
         logger.info("TAREA 2:00 -> Simulación envío recordatorios de reservas");
     }
 
-    // Día 1 de cada mes a las 9:00 (simulación)
+    // Día 1 de cada mes a las 9:00
     @Scheduled(cron = "0 0 9 1 * *")
     public void infoMensualDia1() {
         logger.info("TAREA día 1 -> Simulación envío info mensual");
