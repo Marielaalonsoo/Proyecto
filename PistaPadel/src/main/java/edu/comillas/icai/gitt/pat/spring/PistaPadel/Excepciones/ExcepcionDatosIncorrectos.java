@@ -12,6 +12,7 @@ public class ExcepcionDatosIncorrectos extends RuntimeException {
     private final List<ModeloCampoIncorrecto> errores = new ArrayList<>();
 
     public ExcepcionDatosIncorrectos(BindingResult br) {
+        super("Datos incorrectos"); // Mensaje interno
         for (FieldError fe : br.getFieldErrors()) {
             errores.add(new ModeloCampoIncorrecto(
                     fe.getDefaultMessage(),
