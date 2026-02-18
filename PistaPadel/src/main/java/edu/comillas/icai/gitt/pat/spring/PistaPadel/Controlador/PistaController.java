@@ -31,7 +31,7 @@ public class PistaController {
         this.almacen = almacen;
     }
 
-    // GET /pistaPadel/courts?active=true|false
+    // GET /pistaPadel/courts active=true/false
     @GetMapping
     public ResponseEntity<?> listar(@RequestParam(name = "active", required = false) Boolean active) {
 
@@ -63,8 +63,12 @@ public class PistaController {
     public ResponseEntity<?> crear(@Valid @RequestBody ModeloPistaCrear req, BindingResult br) {
 
         if (br.hasErrors()) {
-            // si preferís centralizar con ExcepcionDatosIncorrectos como en Auth/User, lo cambiamos.
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST);
+        }
+
+        // No permitir negativos (null los permite)
+        if (req.precioHora() < 0){
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "precioHora inválido");
         }
 
         String nombreNorm = almacen.normalizarNombre(req.nombre());
@@ -100,7 +104,10 @@ public class PistaController {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Body vacío");
         }
 
-        // nombre (si viene) + 409 si colisiona
+        String oldNombre = actual.getNombre();
+        boolean nombreCambiado = false;
+
+        // nombre (si viene con) + 409 si hay pista (colisión)
         if (cambios.nombre() != null && !cambios.nombre().isBlank()) {
             String nuevoNombreNorm = almacen.normalizarNombre(cambios.nombre());
 
@@ -110,6 +117,7 @@ public class PistaController {
             }
 
             actual.setNombre(cambios.nombre().trim());
+            nombreCambiado = true;
         }
 
         // ubicacion (si viene)
@@ -135,8 +143,12 @@ public class PistaController {
             actual.setPrecioHora(cambios.precioHora());
         }
 
-        // Re-guardar para mantener índice por nombre consistente
-        almacen.guardarPista(actual);
+        // Guardar manteniendo índice por nombre consistente
+        if (nombreCambiado) {
+            almacen.actualizarNombrePista(actual, oldNombre);
+        } else {
+            almacen.guardarPista(actual);
+        }
 
         logger.info("Pista modificada: id={}", actual.getIdPista());
         return ResponseEntity.ok(actual);
@@ -155,5 +167,4 @@ public class PistaController {
         logger.info("Pista borrada: id={}", courtId);
         return ResponseEntity.noContent().build();
     }
-
 }
