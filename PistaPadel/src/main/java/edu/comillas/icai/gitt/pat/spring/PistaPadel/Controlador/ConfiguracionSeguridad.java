@@ -39,7 +39,7 @@ public class ConfiguracionSeguridad {
     public UserDetailsService usuarios() {
 
         // noop sirve para decirle a Spring que la contraseña no está encriptada, es literalmente lo que pone
-        // withDefaultPasswordEncoder() nos daba warning, se lo tragaba pero warning
+        // withDefaultPasswordEncoder() nos daba warning, se lo tragaba pero warning/
         UserDetails user = User.withUsername("user")
                 .password("{noop}user")
                 .roles("USER")
