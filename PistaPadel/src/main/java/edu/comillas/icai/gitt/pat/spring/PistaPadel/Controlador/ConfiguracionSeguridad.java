@@ -50,6 +50,11 @@ public class ConfiguracionSeguridad {
                 .roles("ADMIN")
                 .build();
 
-        return new InMemoryUserDetailsManager(user, admin);
+        UserDetails andres = User.withUsername("andres")
+                .password("{noop}andres")
+                .roles("USER")
+                .build();
+
+        return new InMemoryUserDetailsManager(user, admin, andres);
     }
 }
