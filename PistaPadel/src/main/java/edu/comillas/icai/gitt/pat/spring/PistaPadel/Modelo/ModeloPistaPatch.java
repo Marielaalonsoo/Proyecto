@@ -8,4 +8,4 @@ public record ModeloPistaPatch(
         Integer precioHora,
         Boolean activa,
         LocalDate fechaAlta
-) { }
+) {}
