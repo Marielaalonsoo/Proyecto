@@ -31,7 +31,6 @@ public class ReservaController {
         this.almacen = almacen;
     }
 
-    // --- Auth “usable” para entrega: si no existe en memoria, lo crea ---
     private Usuario getUsuarioAutenticado(Principal principal) {
         if (principal == null || principal.getName() == null) {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "No autenticado");
@@ -63,6 +62,7 @@ public class ReservaController {
         return nuevo;
     }
 
+    // Nunca se llama a esAdmin(), solo !esAdmin() (no importa)
     private boolean esAdmin(Usuario u) {
         return u.getRol() == Rol.ADMIN;
     }
@@ -72,7 +72,6 @@ public class ReservaController {
         if (!dueno && !esAdmin(u)) throw new ResponseStatusException(HttpStatus.FORBIDDEN, "No autorizado");
     }
 
-    // Parser flexible: acepta YYYY-MM-DD o YYYY-MM-DDTHH:mm(:ss)
     private LocalDateTime parseFromTo(String s, boolean endOfDayIfDate) {
         if (s == null) return null;
         try {
@@ -90,9 +89,7 @@ public class ReservaController {
         return LocalDateTime.of(r.getFechaReserva(), r.getHoraInicio());
     }
 
-    // =========================
     // POST /pistaPadel/reservations  -> 201 / 400 / 401 / 404 / 409
-    // =========================
     @PostMapping("/reservations")
     public ResponseEntity<?> crearReserva(@Valid @RequestBody ModeloReserva body,
                                           BindingResult br,
@@ -113,7 +110,6 @@ public class ReservaController {
         LocalTime inicio = body.time();
         LocalTime fin = inicio.plusMinutes(body.durationMinutes());
 
-        // Restricción: no solape (ACTIVAS) en misma pista/fecha
         if (almacen.haySolape(body.courtId(), body.date(), inicio, fin)) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Slot ocupado");
         }
@@ -137,10 +133,7 @@ public class ReservaController {
         return ResponseEntity.status(HttpStatus.CREATED).body(nueva);
     }
 
-    // =========================
-    // GET /pistaPadel/reservations?from=...&to=...  -> 200 / 401
-    // (Mis reservas)
-    // =========================
+    // GET /pistaPadel/reservations Mis reservas  -> 200 / 401
     @GetMapping("/reservations")
     public ResponseEntity<?> misReservas(@RequestParam(required = false) String from,
                                          @RequestParam(required = false) String to,
@@ -166,10 +159,7 @@ public class ReservaController {
         return ResponseEntity.ok(res);
     }
 
-    // =========================
     // GET /pistaPadel/reservations/{reservationId} -> 200 / 401 / 403 / 404
-    // (Dueño o admin)
-    // =========================
     @GetMapping("/reservations/{reservationId}")
     public ResponseEntity<?> obtenerReserva(@PathVariable Integer reservationId,
                                             Principal principal) {
@@ -183,10 +173,7 @@ public class ReservaController {
         return ResponseEntity.ok(r);
     }
 
-    // =========================
     // DELETE /pistaPadel/reservations/{reservationId} -> 204 / 401 / 403 / 404 / 409
-    // (Cancelar)
-    // =========================
     @DeleteMapping("/reservations/{reservationId}")
     public ResponseEntity<?> cancelarReserva(@PathVariable Integer reservationId,
                                              Principal principal) {
@@ -202,17 +189,13 @@ public class ReservaController {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Ya cancelada");
         }
 
-        // (Política extra opcional: no cancelar si faltan X horas. Si la tuvieras -> 409)
         r.setEstado(EstadoReserva.CANCELADA);
 
         logger.info("Reserva cancelada: idReserva={}, porUserId={}", reservationId, u.getIdUsuario());
         return ResponseEntity.noContent().build();
     }
 
-    // =========================
     // PATCH /pistaPadel/reservations/{reservationId} -> 200 / 400 / 401 / 403 / 404 / 409
-    // (Reprogramar/cambiar) - opcional
-    // =========================
     @PatchMapping("/reservations/{reservationId}")
     public ResponseEntity<?> modificarReserva(@PathVariable Integer reservationId,
                                               @RequestBody ModeloReservaPatch body,
@@ -231,13 +214,12 @@ public class ReservaController {
 
         if (body == null) throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Body vacío");
 
-        // PATCH “opcional”: si viene null, se mantiene el valor actual
+        // Si viene null, mantener valor actual
         Integer newCourtId = (body.courtId() != null) ? body.courtId() : actual.getIdPista();
         LocalDate newDate = (body.date() != null) ? body.date() : actual.getFechaReserva();
         LocalTime newTime = (body.time() != null) ? body.time() : actual.getHoraInicio();
         Integer newDur = (body.durationMinutes() != null) ? body.durationMinutes() : actual.getDuracionMinutos();
 
-        // Si no cambia nada -> 400 (opcional, pero limpio)
         boolean cambiaAlgo =
                 !Objects.equals(newCourtId, actual.getIdPista()) ||
                         !Objects.equals(newDate, actual.getFechaReserva()) ||
@@ -248,7 +230,7 @@ public class ReservaController {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "No hay cambios");
         }
 
-        if (newDur == null || newDur <= 0) {
+        if (newDur <= 0) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "durationMinutes inválido");
         }
 
@@ -258,28 +240,31 @@ public class ReservaController {
 
         LocalTime newEnd = newTime.plusMinutes(newDur);
 
-        // Restricción: no solape excluyendo la propia reserva
+        // No solapamiento
         if (almacen.haySolapeExcluyendo(actual.getIdReserva(), newCourtId, newDate, newTime, newEnd)) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Slot ocupado");
         }
 
         int oldPistaId = actual.getIdPista();
 
-        actual.setIdPista(newCourtId);
-        actual.setFechaReserva(newDate);
-        actual.setHoraInicio(newTime);
-        actual.setDuracionMinutos(newDur);
+        Reserva updated = new Reserva(
+                actual.getIdReserva(),
+                actual.getIdUsuario(),
+                newCourtId,
+                newDate,
+                newTime,
+                newDur,
+                actual.getEstado(),
+                actual.getFechaCreacion()
+        );
 
-        almacen.actualizarReserva(actual, oldPistaId);
+        almacen.actualizarReserva(updated, oldPistaId);
 
         logger.info("Reserva modificada: idReserva={}, porUserId={}", reservationId, u.getIdUsuario());
-        return ResponseEntity.ok(actual);
+        return ResponseEntity.ok(updated);
     }
 
-    // =========================
-    // GET /pistaPadel/admin/reservations?date=...&courtId=...&userId=... -> 200 / 401 / 403
-    // (Admin ver todas)
-    // =========================
+    // GET /pistaPadel/admin/reservations Ver reservas de todos -> 200 / 401 / 403
     @GetMapping("/admin/reservations")
     public ResponseEntity<?> adminReservas(@RequestParam(required = false) String date,
                                            @RequestParam(required = false) Integer courtId,
@@ -307,9 +292,7 @@ public class ReservaController {
         return ResponseEntity.ok(res);
     }
 
-    // =========================
-    // Availability (dejo tus endpoints)
-    // =========================
+    // GET Availability
     @GetMapping("/courts/{courtId}/availability")
     public ResponseEntity<?> disponibilidadPista(@PathVariable int courtId,
                                                  @RequestParam String date) {
