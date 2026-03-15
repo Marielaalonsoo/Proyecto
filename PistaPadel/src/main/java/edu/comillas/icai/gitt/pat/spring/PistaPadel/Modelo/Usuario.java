@@ -1,30 +1,57 @@
 package edu.comillas.icai.gitt.pat.spring.PistaPadel.Modelo;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
+import jakarta.persistence.*;
+
+@Entity
+@Table(name = "usuarios")
 public class Usuario {
 
+        @Id
+        @GeneratedValue(strategy = GenerationType.IDENTITY)
         private Integer idUsuario;
+
+        @Column(nullable = false)
         private String nombre;
+
+        @Column(nullable = false)
         private String apellidos;
+
+        @Column(nullable = false, unique = true) //único y no nulo
         private String email;
-        private String password;
+
+        @Column(nullable = false)
+        private String passwordHash;
+
+        @Column(nullable = false)
         private String telefono;
+
+        @Column(nullable = false)
         private Rol rol;
+
+        @Column(nullable = false)
         private LocalDateTime fechaRegistro;
+
+        @Column(nullable = false)
         private boolean activo;
+
+        @OneToMany(mappedBy = "usuario")
+        private List<Reserva> reservas = new ArrayList<>();
 
     public Usuario() { }
 
     public Usuario(Integer idUsuario, String nombre, String apellidos, String email,
-                       String password, String telefono, Rol rol,
-                       LocalDateTime fechaRegistro, boolean activo) {
+                   String passwordHash, String telefono, Rol rol,
+                   LocalDateTime fechaRegistro, boolean activo) {
 
             this.idUsuario = idUsuario;
             this.nombre = nombre;
             this.apellidos = apellidos;
             this.email = email;
-            this.password = password;
+            this.passwordHash = passwordHash;
             this.telefono = telefono;
             this.rol = rol;
             this.fechaRegistro = fechaRegistro;
@@ -47,8 +74,8 @@ public class Usuario {
         return email;
     }
 
-    public String getPassword() {
-        return password;
+    public String getPasswordHash() {
+        return passwordHash;
     }
 
     public String getTelefono() {
@@ -87,8 +114,8 @@ public class Usuario {
         this.apellidos = apellidos;
     }
 
-    public void setPassword(String password) {
-        this.password = password;
+    public void setPasswordHash(String passwordHash) {
+        this.passwordHash = passwordHash;
     }
 
     public void setRol(Rol rol) {

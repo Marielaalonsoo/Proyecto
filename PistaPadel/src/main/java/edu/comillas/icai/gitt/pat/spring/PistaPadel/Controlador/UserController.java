@@ -56,7 +56,7 @@ public class UserController {
         nuevo.setNombre(username);
         nuevo.setApellidos("");
         nuevo.setEmail(emailNorm);
-        nuevo.setPassword("");
+        nuevo.setPasswordHash("");
         nuevo.setTelefono("");
         nuevo.setRol(Rol.USER);
         nuevo.setFechaRegistro(LocalDateTime.now());

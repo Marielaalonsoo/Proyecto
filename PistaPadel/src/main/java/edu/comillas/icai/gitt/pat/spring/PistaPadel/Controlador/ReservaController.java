@@ -52,7 +52,7 @@ public class ReservaController {
         nuevo.setNombre(username);
         nuevo.setApellidos("");
         nuevo.setEmail(emailNorm);
-        nuevo.setPassword("");
+        nuevo.setPasswordHash("");
         nuevo.setTelefono("");
         nuevo.setRol("admin".equalsIgnoreCase(username) ? Rol.ADMIN : Rol.USER);
         nuevo.setFechaRegistro(LocalDateTime.now());

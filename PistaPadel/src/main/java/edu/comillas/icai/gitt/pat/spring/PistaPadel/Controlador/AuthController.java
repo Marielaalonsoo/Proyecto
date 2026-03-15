@@ -54,7 +54,7 @@ public class AuthController {
         nuevo.setNombre(username);
         nuevo.setApellidos("");
         nuevo.setEmail(emailNorm);
-        nuevo.setPassword("");
+        nuevo.setPasswordHash("");
         nuevo.setTelefono("");
         nuevo.setRol("admin".equalsIgnoreCase(username) ? Rol.ADMIN : Rol.USER);
         nuevo.setFechaRegistro(LocalDateTime.now());
@@ -84,7 +84,7 @@ public class AuthController {
         u.setNombre(req.nombre().trim());
         u.setApellidos(req.apellidos() == null ? "" : req.apellidos().trim());
         u.setEmail(emailNorm);
-        u.setPassword(req.password()); // Se guarda para más adelante
+        u.setPasswordHash(req.password()); // Se guarda para más adelante
         u.setTelefono(req.telefono() == null ? "" : req.telefono().trim());
         u.setRol(Rol.USER);
         u.setFechaRegistro(LocalDateTime.now());
