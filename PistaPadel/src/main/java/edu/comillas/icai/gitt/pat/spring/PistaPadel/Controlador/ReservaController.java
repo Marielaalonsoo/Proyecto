@@ -68,7 +68,7 @@ public class ReservaController {
     }
 
     private void exigirDuenoOAdmin(Usuario u, Reserva r) {
-        boolean dueno = r.getIdUsuario().equals(u.getIdUsuario());
+        boolean dueno = r.getUsuario().getIdUsuario().equals(u.getIdUsuario());
         if (!dueno && !esAdmin(u)) throw new ResponseStatusException(HttpStatus.FORBIDDEN, "No autorizado");
     }
 
@@ -146,7 +146,7 @@ public class ReservaController {
 
         List<Reserva> res = new ArrayList<>();
         for (Reserva r : almacen.listarReservas()) {
-            if (!r.getIdUsuario().equals(u.getIdUsuario())) continue;
+            if (!r.getUsuario().getIdUsuario().equals(u.getIdUsuario())) continue;
 
             LocalDateTime ini = inicioReserva(r);
             if (fromDT != null && ini.isBefore(fromDT)) continue;
@@ -215,13 +215,13 @@ public class ReservaController {
         if (body == null) throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Body vacío");
 
         // Si viene null, mantener valor actual
-        Integer newCourtId = (body.courtId() != null) ? body.courtId() : actual.getIdPista();
+        Integer newCourtId = (body.courtId() != null) ? body.courtId() : actual.getPista().getIdPista();
         LocalDate newDate = (body.date() != null) ? body.date() : actual.getFechaReserva();
         LocalTime newTime = (body.time() != null) ? body.time() : actual.getHoraInicio();
         Integer newDur = (body.durationMinutes() != null) ? body.durationMinutes() : actual.getDuracionMinutos();
 
         boolean cambiaAlgo =
-                !Objects.equals(newCourtId, actual.getIdPista()) ||
+                !Objects.equals(newCourtId, actual.getPista().getIdPista()) ||
                         !Objects.equals(newDate, actual.getFechaReserva()) ||
                         !Objects.equals(newTime, actual.getHoraInicio()) ||
                         !Objects.equals(newDur, actual.getDuracionMinutos());
@@ -245,7 +245,7 @@ public class ReservaController {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Slot ocupado");
         }
 
-        int oldPistaId = actual.getIdPista();
+        int oldPistaId = actual.getPista().getIdPista();
 
         Reserva updated = new Reserva(
                 actual.getIdReserva(),
@@ -283,8 +283,8 @@ public class ReservaController {
         List<Reserva> res = new ArrayList<>();
         for (Reserva r : almacen.listarReservas()) {
             if (d != null && !d.equals(r.getFechaReserva())) continue;
-            if (courtId != null && !courtId.equals(r.getIdPista())) continue;
-            if (userId != null && !userId.equals(r.getIdUsuario())) continue;
+            if (courtId != null && !courtId.equals(r.getPista().getIdPista())) continue;
+            if (userId != null && !userId.equals(r.getUsuario().getIdUsuario())) continue;
             res.add(r);
         }
 
