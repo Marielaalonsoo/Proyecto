@@ -6,11 +6,18 @@ import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
-import org.springframework.security.core.userdetails.User;
-import org.springframework.security.core.userdetails.UserDetails;
+//import org.springframework.security.core.userdetails.User;
+//import org.springframework.security.core.userdetails.UserDetails;
+//import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.provisioning.InMemoryUserDetailsManager;
 import org.springframework.security.web.SecurityFilterChain;
+import edu.comillas.icai.gitt.pat.spring.PistaPadel.Repositorio.RepoUsuario;
+import edu.comillas.icai.gitt.pat.spring.PistaPadel.Modelo.Usuario;
+
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
+import org.springframework.security.crypto.password.NoOpPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
 
 @Configuration
 @EnableWebSecurity
@@ -20,41 +27,39 @@ public class ConfiguracionSeguridad {
     @Bean
     public SecurityFilterChain configuracion(HttpSecurity http) throws Exception {
 
-        // Tanto register como health sin autenticación
-        http.authorizeHttpRequests(auth -> auth
-                .requestMatchers("/pistaPadel/health", "/pistaPadel/auth/register").permitAll()
-                .anyRequest().authenticated()
-        );
-
-        // http.formLogin(Customizer.withDefaults());  No redirige (302), sin esto acceso con Basic Auth
-        // y si no estás autentucado 401 Unauthorized (solo entrega 1 en principio)
-        http.httpBasic(Customizer.withDefaults());
-
-        http.csrf(csrf -> csrf.ignoringRequestMatchers("/pistaPadel/**"));
+        http
+                .authorizeHttpRequests(auth -> auth
+                        .requestMatchers("/h2-console/**").permitAll()
+                        .requestMatchers("/pistaPadel/health", "/pistaPadel/auth/register").permitAll()
+                        .anyRequest().authenticated()
+                )
+                .httpBasic(Customizer.withDefaults())
+                .csrf(csrf -> csrf.ignoringRequestMatchers("/pistaPadel/**", "/h2-console/**"))
+                .headers(headers -> headers.frameOptions(frame -> frame.sameOrigin()));
 
         return http.build();
     }
 
     @Bean
-    public UserDetailsService usuarios() {
+    public UserDetailsService usuarios(RepoUsuario repoUsuario) {
+        return username -> {
+            Usuario u = repoUsuario.findByEmailIgnoreCase(username)
+                    .orElseThrow(() -> new UsernameNotFoundException("Usuario no encontrado: " + username));
 
-        // noop sirve para decirle a Spring que la contraseña no está encriptada, es literalmente lo que pone
-        // withDefaultPasswordEncoder() nos daba warning, se lo tragaba pero warning/
-        UserDetails user = User.withUsername("user")
-                .password("{noop}user")
-                .roles("USER")
-                .build();
+            if (!u.isActivo()) {
+                throw new UsernameNotFoundException("Usuario inactivo: " + username);
+            }
 
-        UserDetails admin = User.withUsername("admin")
-                .password("{noop}admin")
-                .roles("ADMIN")
-                .build();
+            return org.springframework.security.core.userdetails.User
+                    .withUsername(u.getEmail())
+                    .password(u.getPasswordHash())
+                    .roles(u.getRol().name())
+                    .build();
+        };
+    }
 
-        UserDetails andres = User.withUsername("andres")
-                .password("{noop}andres")
-                .roles("USER")
-                .build();
-
-        return new InMemoryUserDetailsManager(user, admin, andres);
+    @Bean //temporal
+    public PasswordEncoder passwordEncoder() {
+        return NoOpPasswordEncoder.getInstance();
     }
 }
