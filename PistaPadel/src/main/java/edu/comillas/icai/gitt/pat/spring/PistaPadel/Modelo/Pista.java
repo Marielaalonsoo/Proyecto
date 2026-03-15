@@ -2,14 +2,36 @@ package edu.comillas.icai.gitt.pat.spring.PistaPadel.Modelo;
 
 import java.time.LocalDate;
 
+import jakarta.persistence.*;
+import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.List;
+
+@Entity
+@Table(name = "pistas")
 public class Pista {
 
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Integer idPista;
+
+    @Column(nullable = false, unique = true)
     private String nombre;
+
+    @Column(nullable = false)
     private int precioHora;
+
+    @Column(nullable = false)
     private String ubicacion;
+
+    @Column(nullable = false)
     private boolean activa = true;
+
+    @Column(nullable = false)
     private LocalDate fechaAlta;
+
+    @OneToMany(mappedBy = "pista")
+    private List<Reserva> reservas = new ArrayList<>();
 
     public Pista() { }
 
