@@ -6,6 +6,6 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import java.util.Optional;
 
 public interface RepoUsuario extends JpaRepository<Usuario, Integer> {
-    Optional<Usuario> findByEmailIgnoreCase(String email);
-    boolean existsByEmailIgnoreCase(String email);
+    Optional<Usuario> findByEmailIgnoreCase(String email); //busca usuario por su correo electrónico; si el usuario no existe, devuelve vacío
+    boolean existsByEmailIgnoreCase(String email); //consulta rápida para ver si existe el email
 }

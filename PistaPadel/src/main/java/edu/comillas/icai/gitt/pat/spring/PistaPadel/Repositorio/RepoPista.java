@@ -7,7 +7,7 @@ import java.util.Optional;
 import java.util.List;
 
 public interface RepoPista extends JpaRepository<Pista, Integer> {
-    Optional<Pista> findByNombreIgnoreCase(String nombre);
+    Optional<Pista> findByNombreIgnoreCase(String nombre); //buscan por nombre
     boolean existsByNombreIgnoreCase(String nombre);
-    List<Pista> findByActiva(boolean activa);
+    List<Pista> findByActiva(boolean activa); //te devuelve las pistas operativas al momento (true)
 }
