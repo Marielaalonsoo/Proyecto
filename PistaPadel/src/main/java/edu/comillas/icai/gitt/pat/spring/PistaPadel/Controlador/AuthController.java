@@ -1,6 +1,7 @@
 package edu.comillas.icai.gitt.pat.spring.PistaPadel.Controlador;
 
-import edu.comillas.icai.gitt.pat.spring.PistaPadel.Almacen.AlmacenMemoria;
+//import edu.comillas.icai.gitt.pat.spring.PistaPadel.Almacen.AlmacenMemoria;
+import edu.comillas.icai.gitt.pat.spring.PistaPadel.Repositorio.RepoUsuario;
 import edu.comillas.icai.gitt.pat.spring.PistaPadel.Excepciones.ExcepcionDatosIncorrectos;
 import edu.comillas.icai.gitt.pat.spring.PistaPadel.Modelo.ModeloLogin;
 import edu.comillas.icai.gitt.pat.spring.PistaPadel.Modelo.ModeloUsuario;
@@ -27,9 +28,14 @@ public class AuthController {
 
     private static final Logger logger = LoggerFactory.getLogger(AuthController.class);
 
-    private final AlmacenMemoria almacen;
+    //private final AlmacenMemoria almacen;
+    //public AuthController(AlmacenMemoria almacen) {this.almacen = almacen;}
 
-    public AuthController(AlmacenMemoria almacen) {this.almacen = almacen;}
+    private final RepoUsuario repoUsuario;
+
+    public AuthController(RepoUsuario repoUsuario) {
+        this.repoUsuario = repoUsuario;
+    }
 
     private Usuario getUsuarioAutenticado(Principal principal) {
         if (principal == null || principal.getName() == null) {
@@ -41,16 +47,18 @@ public class AuthController {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED);
         }
 
-        String emailNorm = almacen.normalizarEmail(username);
+        String emailNorm = username.toLowerCase().trim();
 
-        Usuario u = almacen.buscarUsuarioPorEmail(emailNorm);
+        Usuario u = repoUsuario.findByEmailIgnoreCase(emailNorm).orElse(null);
         if (u != null) {
-            if(!u.isActivo()) throw new ResponseStatusException(HttpStatus.UNAUTHORIZED);
+            if (!u.isActivo()) {
+                throw new ResponseStatusException(HttpStatus.UNAUTHORIZED);
+            }
             return u;
         }
 
         Usuario nuevo = new Usuario();
-        nuevo.setIdUsuario(almacen.generarIdUsuario());
+        nuevo.setIdUsuario(null);
         nuevo.setNombre(username);
         nuevo.setApellidos("");
         nuevo.setEmail(emailNorm);
@@ -60,8 +68,7 @@ public class AuthController {
         nuevo.setFechaRegistro(LocalDateTime.now());
         nuevo.setActivo(true);
 
-        almacen.guardarUsuario(nuevo);
-        return nuevo;
+        return repoUsuario.save(nuevo);
     }
 
     // 201 / 400 / 409
@@ -72,35 +79,35 @@ public class AuthController {
             throw new ExcepcionDatosIncorrectos(result);
         }
 
-        String emailNorm = almacen.normalizarEmail(req.email());
+        String emailNorm = req.email().toLowerCase().trim();
 
-        if (almacen.buscarUsuarioPorEmail(emailNorm) != null) {
+        if (repoUsuario.existsByEmailIgnoreCase(emailNorm)) {
             logger.info("Registro rechazado por email duplicado: {}", emailNorm);
             throw new ResponseStatusException(HttpStatus.CONFLICT);
         }
 
         Usuario u = new Usuario();
-        u.setIdUsuario(almacen.generarIdUsuario());
+        u.setIdUsuario(null);
         u.setNombre(req.nombre().trim());
         u.setApellidos(req.apellidos() == null ? "" : req.apellidos().trim());
         u.setEmail(emailNorm);
-        u.setPasswordHash(req.password()); // Se guarda para más adelante
+        u.setPasswordHash(req.password());
         u.setTelefono(req.telefono() == null ? "" : req.telefono().trim());
         u.setRol(Rol.USER);
         u.setFechaRegistro(LocalDateTime.now());
         u.setActivo(true);
 
-        almacen.guardarUsuario(u);
+        Usuario guardado = repoUsuario.save(u);
 
         Map<String, Object> res = new HashMap<>();
-        res.put("idUsuario", u.getIdUsuario());
-        res.put("nombre", u.getNombre());
-        res.put("apellidos", u.getApellidos());
-        res.put("email", u.getEmail());
-        res.put("telefono", u.getTelefono());
-        res.put("rol", u.getRol().toString());
-        res.put("activo", u.isActivo());
-        res.put("fechaRegistro", u.getFechaRegistro());
+        res.put("idUsuario", guardado.getIdUsuario());
+        res.put("nombre", guardado.getNombre());
+        res.put("apellidos", guardado.getApellidos());
+        res.put("email", guardado.getEmail());
+        res.put("telefono", guardado.getTelefono());
+        res.put("rol", guardado.getRol().toString());
+        res.put("activo", guardado.isActivo());
+        res.put("fechaRegistro", guardado.getFechaRegistro());
 
         return ResponseEntity.status(HttpStatus.CREATED).body(res);
     }
