@@ -1,6 +1,7 @@
 package edu.comillas.icai.gitt.pat.spring.PistaPadel.Controlador;
 
-import edu.comillas.icai.gitt.pat.spring.PistaPadel.Almacen.AlmacenMemoria;
+//import edu.comillas.icai.gitt.pat.spring.PistaPadel.Almacen.AlmacenMemoria;
+import edu.comillas.icai.gitt.pat.spring.PistaPadel.Repositorio.RepoUsuario;
 import edu.comillas.icai.gitt.pat.spring.PistaPadel.Excepciones.ExcepcionDatosIncorrectos;
 import edu.comillas.icai.gitt.pat.spring.PistaPadel.Modelo.ModeloUsuarioPatch;
 import edu.comillas.icai.gitt.pat.spring.PistaPadel.Modelo.Rol;
@@ -26,10 +27,15 @@ public class UserController {
 
     private static final Logger logger = LoggerFactory.getLogger(UserController.class);
 
-    private final AlmacenMemoria almacen;
+    //private final AlmacenMemoria almacen;
+    //public UserController(AlmacenMemoria almacen) {
+    //    this.almacen = almacen;
+    //}
 
-    public UserController(AlmacenMemoria almacen) {
-        this.almacen = almacen;
+    private final RepoUsuario repoUsuario;
+
+    public UserController(RepoUsuario repoUsuario) {
+        this.repoUsuario = repoUsuario;
     }
 
     private Usuario getUsuarioAutenticado(Principal principal) {
@@ -42,17 +48,18 @@ public class UserController {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED);
         }
 
-        String emailNorm = almacen.normalizarEmail(username);
+        String emailNorm = username.toLowerCase().trim();
 
-        Usuario u = almacen.buscarUsuarioPorEmail(emailNorm);
+        Usuario u = repoUsuario.findByEmailIgnoreCase(emailNorm).orElse(null);
         if (u != null) {
-            if (!u.isActivo()) throw new ResponseStatusException(HttpStatus.UNAUTHORIZED);
+            if (!u.isActivo()) {
+                throw new ResponseStatusException(HttpStatus.UNAUTHORIZED);
+            }
             return u;
         }
 
-        // Se crea para que el sistema sea usable (solo entrega 1)
         Usuario nuevo = new Usuario();
-        nuevo.setIdUsuario(almacen.generarIdUsuario());
+        nuevo.setIdUsuario(null);
         nuevo.setNombre(username);
         nuevo.setApellidos("");
         nuevo.setEmail(emailNorm);
@@ -62,8 +69,7 @@ public class UserController {
         nuevo.setFechaRegistro(LocalDateTime.now());
         nuevo.setActivo(true);
 
-        almacen.guardarUsuario(nuevo);
-        return nuevo;
+        return repoUsuario.save(nuevo);
     }
 
     private boolean esAdmin(Usuario u) {
@@ -90,7 +96,7 @@ public class UserController {
 
         Usuario actual = getUsuarioAutenticado(principal);
 
-        List<Usuario> todos = new ArrayList<>(almacen.listarUsuarios());
+        List<Usuario> todos = new ArrayList<>(repoUsuario.findAll());
         todos.sort(Comparator.comparing(Usuario::getIdUsuario));
 
         List<Map<String, Object>> salida = new ArrayList<>();
@@ -115,10 +121,8 @@ public class UserController {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN);
         }
 
-        Usuario x = almacen.buscarUsuarioPorId(userId);
-        if (x == null) {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND);
-        }
+        Usuario x = repoUsuario.findById(userId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
 
         return ResponseEntity.ok(limpiar(x));
     }
@@ -143,10 +147,8 @@ public class UserController {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN);
         }
 
-        Usuario x = almacen.buscarUsuarioPorId(userId);
-        if (x == null) {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND);
-        }
+        Usuario x = repoUsuario.findById(userId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
 
         if (req.nombre() != null) {
             String nombre = req.nombre().trim();
@@ -165,21 +167,21 @@ public class UserController {
         }
 
         if (req.email() != null) {
-            String nuevoNorm = almacen.normalizarEmail(req.email());
-            String oldEmail = x.getEmail();
-            String actualNorm = almacen.normalizarEmail(x.getEmail());
+            String nuevoNorm = req.email().toLowerCase().trim();
+            String actualNorm = x.getEmail().toLowerCase().trim();
 
             if (!nuevoNorm.equals(actualNorm)) {
-                Usuario existente = almacen.buscarUsuarioPorEmail(nuevoNorm);
+                Usuario existente = repoUsuario.findByEmailIgnoreCase(nuevoNorm).orElse(null);
                 if (existente != null && !existente.getIdUsuario().equals(x.getIdUsuario())) {
                     throw new ResponseStatusException(HttpStatus.CONFLICT);
                 }
                 x.setEmail(nuevoNorm);
-                almacen.actualizarEmailUsuario(x, oldEmail);
             }
         }
 
-        logger.info("Usuario actualizado: id={}, por={}", x.getIdUsuario(), actual.getIdUsuario());
-        return ResponseEntity.ok(limpiar(x));
+        Usuario guardado = repoUsuario.save(x);
+
+        logger.info("Usuario actualizado: id={}, por={}", guardado.getIdUsuario(), actual.getIdUsuario());
+        return ResponseEntity.ok(limpiar(guardado));
     }
 }
