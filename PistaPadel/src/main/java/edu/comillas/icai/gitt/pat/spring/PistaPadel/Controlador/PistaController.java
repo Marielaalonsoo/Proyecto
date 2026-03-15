@@ -1,6 +1,6 @@
 package edu.comillas.icai.gitt.pat.spring.PistaPadel.Controlador;
 
-import edu.comillas.icai.gitt.pat.spring.PistaPadel.Almacen.AlmacenMemoria;
+//import edu.comillas.icai.gitt.pat.spring.PistaPadel.Almacen.AlmacenMemoria;
 import edu.comillas.icai.gitt.pat.spring.PistaPadel.Modelo.ModeloPistaCrear;
 import edu.comillas.icai.gitt.pat.spring.PistaPadel.Modelo.ModeloPistaPatch;
 import edu.comillas.icai.gitt.pat.spring.PistaPadel.Modelo.Pista;
@@ -15,9 +15,11 @@ import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 
-import java.util.ArrayList;
-import java.util.Comparator;
+//import java.util.ArrayList;
+//import java.util.Comparator;
+import java.time.LocalDate;
 import java.util.List;
+import edu.comillas.icai.gitt.pat.spring.PistaPadel.Repositorio.RepoPista;
 
 @RestController
 @RequestMapping("/pistaPadel/courts")
@@ -25,23 +27,30 @@ public class PistaController {
 
     private static final Logger logger = LoggerFactory.getLogger(PistaController.class);
 
-    private final AlmacenMemoria almacen;
+    //private final AlmacenMemoria almacen;
+    private final RepoPista repoPista;
 
-    public PistaController(AlmacenMemoria almacen) {
-        this.almacen = almacen;
+    //public PistaController(AlmacenMemoria almacen) {
+        //this.almacen = almacen;
+    //}
+    public PistaController(RepoPista repoPista) {
+        this.repoPista = repoPista;
     }
 
+    // GET /pistaPadel/courts active=true/false
     // GET /pistaPadel/courts active=true/false
     @GetMapping
     public ResponseEntity<?> listar(@RequestParam(name = "active", required = false) Boolean active) {
 
-        List<Pista> res = new ArrayList<>(almacen.listarPistas());
+        List<Pista> res;
 
         if (active != null) {
-            res.removeIf(p -> p.isActiva() != active);
+            res = repoPista.findByActiva(active);
+        } else {
+            res = repoPista.findAll();
         }
 
-        res.sort(Comparator.comparing(Pista::getIdPista));
+        res.sort(java.util.Comparator.comparing(Pista::getIdPista));
         return ResponseEntity.ok(res);
     }
 
@@ -49,10 +58,8 @@ public class PistaController {
     @GetMapping("/{courtId}")
     public ResponseEntity<?> detalle(@PathVariable int courtId) {
 
-        Pista p = almacen.buscarPista(courtId);
-        if (p == null) {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Pista no existe");
-        }
+        Pista p = repoPista.findById(courtId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Pista no existe"));
 
         return ResponseEntity.ok(p);
     }
@@ -66,28 +73,28 @@ public class PistaController {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST);
         }
 
-        // No permitir negativos (null los permite)
-        if (req.precioHora() < 0){
+        if (req.precioHora() < 0) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "precioHora inválido");
         }
 
-        String nombreNorm = almacen.normalizarNombre(req.nombre());
-        if (almacen.buscarPistaPorNombre(nombreNorm) != null) {
+        String nombre = req.nombre().trim();
+
+        if (repoPista.existsByNombreIgnoreCase(nombre)) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Ya existe una pista con ese nombre");
         }
 
         Pista nueva = new Pista();
-        nueva.setIdPista(almacen.generarIdPista());
-        nueva.setNombre(req.nombre().trim());
+        nueva.setIdPista(null);
+        nueva.setNombre(nombre);
         nueva.setUbicacion(req.ubicacion().trim());
         nueva.setPrecioHora(req.precioHora());
         nueva.setActiva(req.activa());
-        nueva.setFechaAlta(req.fechaAlta());
+        nueva.setFechaAlta(req.fechaAlta() != null ? req.fechaAlta() : LocalDate.now());
 
-        almacen.guardarPista(nueva);
+        Pista guardada = repoPista.save(nueva);
 
-        logger.info("Pista creada: id={}, nombre={}", nueva.getIdPista(), nueva.getNombre());
-        return ResponseEntity.status(HttpStatus.CREATED).body(nueva);
+        logger.info("Pista creada: id={}, nombre={}", guardada.getIdPista(), guardada.getNombre());
+        return ResponseEntity.status(HttpStatus.CREATED).body(guardada);
     }
 
     // PATCH /pistaPadel/courts/{courtId} (ADMIN) -> 200 / 400 / 404 / 409
@@ -96,46 +103,36 @@ public class PistaController {
     public ResponseEntity<?> modificar(@PathVariable int courtId,
                                        @RequestBody ModeloPistaPatch cambios) {
 
-        Pista actual = almacen.buscarPista(courtId);
-        if (actual == null) {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Pista no existe");
-        }
+        Pista actual = repoPista.findById(courtId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Pista no existe"));
+
         if (cambios == null) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Body vacío");
         }
 
-        String oldNombre = actual.getNombre();
-        boolean nombreCambiado = false;
-
-        // nombre (si viene con) + 409 si hay pista (colisión)
         if (cambios.nombre() != null && !cambios.nombre().isBlank()) {
-            String nuevoNombreNorm = almacen.normalizarNombre(cambios.nombre());
+            String nuevoNombre = cambios.nombre().trim();
 
-            Pista otra = almacen.buscarPistaPorNombre(nuevoNombreNorm);
-            if (otra != null && otra.getIdPista() != courtId) {
+            Pista otra = repoPista.findByNombreIgnoreCase(nuevoNombre).orElse(null);
+            if (otra != null && !otra.getIdPista().equals(courtId)) {
                 throw new ResponseStatusException(HttpStatus.CONFLICT, "Ya existe una pista con ese nombre");
             }
 
-            actual.setNombre(cambios.nombre().trim());
-            nombreCambiado = true;
+            actual.setNombre(nuevoNombre);
         }
 
-        // ubicacion (si viene)
         if (cambios.ubicacion() != null && !cambios.ubicacion().isBlank()) {
             actual.setUbicacion(cambios.ubicacion().trim());
         }
 
-        // fechaAlta (si viene)
         if (cambios.fechaAlta() != null) {
             actual.setFechaAlta(cambios.fechaAlta());
         }
 
-        // activa (si viene)
         if (cambios.activa() != null) {
             actual.setActiva(cambios.activa());
         }
 
-        // precioHora (si viene)
         if (cambios.precioHora() != null) {
             if (cambios.precioHora() < 0) {
                 throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "precioHora inválido");
@@ -143,15 +140,10 @@ public class PistaController {
             actual.setPrecioHora(cambios.precioHora());
         }
 
-        // Guardar manteniendo índice por nombre consistente
-        if (nombreCambiado) {
-            almacen.actualizarNombrePista(actual, oldNombre);
-        } else {
-            almacen.guardarPista(actual);
-        }
+        Pista guardada = repoPista.save(actual);
 
-        logger.info("Pista modificada: id={}", actual.getIdPista());
-        return ResponseEntity.ok(actual);
+        logger.info("Pista modificada: id={}", guardada.getIdPista());
+        return ResponseEntity.ok(guardada);
     }
 
     // DELETE /pistaPadel/courts/{courtId} (ADMIN) -> 204 / 404
@@ -159,10 +151,11 @@ public class PistaController {
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<?> borrar(@PathVariable int courtId) {
 
-        boolean borrada = almacen.eliminarPista(courtId);
-        if (!borrada) {
+        if (!repoPista.existsById(courtId)) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Pista no existe");
         }
+
+        repoPista.deleteById(courtId);
 
         logger.info("Pista borrada: id={}", courtId);
         return ResponseEntity.noContent().build();
