@@ -107,8 +107,8 @@ public class AlmacenMemoria {
     // Acciones con reservas
     public void guardarReserva(Reserva reserva) {
         reservasPorId.put(reserva.getIdReserva(), reserva);
-        reservasPorPista.computeIfAbsent(reserva.getIdPista(), k -> new ArrayList<>()).add(reserva);
-        logger.debug("Reserva guardada: id={}, pista={}", reserva.getIdReserva(), reserva.getIdPista());
+        reservasPorPista.computeIfAbsent(reserva.getPista().getIdPista(), k -> new ArrayList<>()).add(reserva);
+        logger.debug("Reserva guardada: id={}, pista={}", reserva.getIdReserva(), reserva.getPista().getIdPista());
     }
 
     public Reserva buscarReservaPorId(Integer id) { return reservasPorId.get(id); }
@@ -118,16 +118,16 @@ public class AlmacenMemoria {
     public void actualizarReserva(Reserva reserva, int oldPistaId) {
         reservasPorId.put(reserva.getIdReserva(), reserva);
 
-        if (oldPistaId != reserva.getIdPista()) {
+        if (oldPistaId != reserva.getPista().getIdPista()) {
             List<Reserva> oldList = reservasPorPista.get(oldPistaId);
             if (oldList != null) {
                 oldList.removeIf(r -> r.getIdReserva().equals(reserva.getIdReserva()));
             }
-            reservasPorPista.computeIfAbsent(reserva.getIdPista(), k -> new ArrayList<>()).add(reserva);
+            reservasPorPista.computeIfAbsent(reserva.getPista().getIdPista(), k -> new ArrayList<>()).add(reserva);
         }
 
         logger.debug("Reserva actualizada: id={}, pista(old->new)={}->{}",
-                reserva.getIdReserva(), oldPistaId, reserva.getIdPista());
+                reserva.getIdReserva(), oldPistaId, reserva.getPista().getIdPista());
     }
 
     public List<Reserva> reservasDePistaEnFecha(int idPista, LocalDate fecha) {
