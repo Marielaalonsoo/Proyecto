@@ -118,8 +118,8 @@ public class ReservaController {
 
         Reserva nueva = new Reserva(
                 idReserva,
-                u.getIdUsuario(),
-                body.courtId(),
+                u,
+                pista,
                 body.date(),
                 inicio,
                 body.durationMinutes(),
@@ -249,8 +249,8 @@ public class ReservaController {
 
         Reserva updated = new Reserva(
                 actual.getIdReserva(),
-                actual.getIdUsuario(),
-                newCourtId,
+                actual.getUsuario(),
+                pista,
                 newDate,
                 newTime,
                 newDur,

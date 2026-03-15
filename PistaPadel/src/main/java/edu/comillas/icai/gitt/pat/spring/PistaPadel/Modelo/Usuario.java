@@ -31,6 +31,7 @@ public class Usuario {
         @Column(nullable = false)
         private String telefono;
 
+        @Enumerated(EnumType.STRING)
         @Column(nullable = false)
         private Rol rol;
 
