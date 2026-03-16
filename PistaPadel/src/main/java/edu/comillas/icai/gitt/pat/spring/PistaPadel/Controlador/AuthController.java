@@ -1,6 +1,5 @@
 package edu.comillas.icai.gitt.pat.spring.PistaPadel.Controlador;
 
-//import edu.comillas.icai.gitt.pat.spring.PistaPadel.Almacen.AlmacenMemoria;
 import edu.comillas.icai.gitt.pat.spring.PistaPadel.Repositorio.RepoUsuario;
 import edu.comillas.icai.gitt.pat.spring.PistaPadel.Excepciones.ExcepcionDatosIncorrectos;
 import edu.comillas.icai.gitt.pat.spring.PistaPadel.Modelo.ModeloLogin;
@@ -13,6 +12,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
@@ -28,13 +28,12 @@ public class AuthController {
 
     private static final Logger logger = LoggerFactory.getLogger(AuthController.class);
 
-    //private final AlmacenMemoria almacen;
-    //public AuthController(AlmacenMemoria almacen) {this.almacen = almacen;}
-
     private final RepoUsuario repoUsuario;
+    private final PasswordEncoder passwordEncoder;
 
-    public AuthController(RepoUsuario repoUsuario) {
+    public AuthController(RepoUsuario repoUsuario, PasswordEncoder passwordEncoder) {
         this.repoUsuario = repoUsuario;
+        this.passwordEncoder = passwordEncoder;
     }
 
     private Usuario getUsuarioAutenticado(Principal principal) {
@@ -49,29 +48,16 @@ public class AuthController {
 
         String emailNorm = username.toLowerCase().trim();
 
-        Usuario u = repoUsuario.findByEmailIgnoreCase(emailNorm).orElse(null);
-        if (u != null) {
-            if (!u.isActivo()) {
-                throw new ResponseStatusException(HttpStatus.UNAUTHORIZED);
-            }
-            return u;
+        Usuario u = repoUsuario.findByEmailIgnoreCase(emailNorm)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Usuario no encontrado"));
+
+        if (!u.isActivo()) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Usuario inactivo");
         }
 
-        Usuario nuevo = new Usuario();
-        nuevo.setIdUsuario(null);
-        nuevo.setNombre(username);
-        nuevo.setApellidos("");
-        nuevo.setEmail(emailNorm);
-        nuevo.setPasswordHash("");
-        nuevo.setTelefono("");
-        nuevo.setRol("admin".equalsIgnoreCase(username) ? Rol.ADMIN : Rol.USER);
-        nuevo.setFechaRegistro(LocalDateTime.now());
-        nuevo.setActivo(true);
-
-        return repoUsuario.save(nuevo);
+        return u;
     }
 
-    // 201 / 400 / 409
     @PostMapping("/register")
     public ResponseEntity<?> register(@Valid @RequestBody ModeloUsuario req, BindingResult result) {
 
@@ -91,7 +77,7 @@ public class AuthController {
         u.setNombre(req.nombre().trim());
         u.setApellidos(req.apellidos() == null ? "" : req.apellidos().trim());
         u.setEmail(emailNorm);
-        u.setPasswordHash(req.password());
+        u.setPasswordHash(passwordEncoder.encode(req.password()));
         u.setTelefono(req.telefono() == null ? "" : req.telefono().trim());
         u.setRol(Rol.USER);
         u.setFechaRegistro(LocalDateTime.now());
@@ -112,9 +98,6 @@ public class AuthController {
         return ResponseEntity.status(HttpStatus.CREATED).body(res);
     }
 
-    // Autentificación no muy clara todavía. Spring autentica antes de entrar al controller,
-    // así que aquí solo se valida el JSON y devuelve ok.
-    // 200 / 400 / 401
     @PostMapping("/login")
     public ResponseEntity<?> login(@Valid @RequestBody ModeloLogin req,
                                    BindingResult result,
@@ -128,14 +111,12 @@ public class AuthController {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED);
         }
 
-        // Asegura que el usuario existe
         Usuario u = getUsuarioAutenticado(principal);
 
         logger.info("Login (Spring Security): userId={}, name={}", u.getIdUsuario(), principal.getName());
         return ResponseEntity.ok(Map.of("ok", true));
     }
 
-    // 200 / 401
     @GetMapping("/me")
     public ResponseEntity<?> me(Principal principal) {
 
@@ -154,8 +135,6 @@ public class AuthController {
         return ResponseEntity.ok(res);
     }
 
-    // 204 / 401
-    // Si ya estás autenticado, devuelve 204.
     @PostMapping("/logout")
     public ResponseEntity<?> logout(Principal principal) {
 
