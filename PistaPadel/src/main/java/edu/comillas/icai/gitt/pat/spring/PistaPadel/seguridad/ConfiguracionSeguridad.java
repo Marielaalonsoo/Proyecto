@@ -1,4 +1,4 @@
-package edu.comillas.icai.gitt.pat.spring.PistaPadel.Controlador;
+package edu.comillas.icai.gitt.pat.spring.PistaPadel.seguridad;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
