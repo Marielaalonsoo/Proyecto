@@ -22,10 +22,6 @@ public class Reserva {
     @JoinColumn(name = "pista_id", nullable = false)
     private Pista pista;
 
-    //private Integer idReserva;
-    //private Integer idUsuario;
-    //private Integer idPista;
-
     @Column(nullable = false)
     private LocalDate fechaReserva;
 
@@ -42,8 +38,12 @@ public class Reserva {
     @Column(nullable = false)
     private EstadoReserva estado;
 
-    @Column(nullable = false)
+    @Column(nullable = false, updatable = false)
     private LocalDateTime fechaCreacion;
+    @PrePersist
+    public void prePersist() {
+        if (fechaCreacion == null) fechaCreacion = LocalDateTime.now();
+    }
 
     public Reserva () {}
 
@@ -74,19 +74,21 @@ public class Reserva {
     public LocalDate getFechaReserva() { return fechaReserva; }
     public void setFechaReserva(LocalDate fechaReserva) { this.fechaReserva = fechaReserva; }
 
+    public LocalTime getHoraFin() { return horaFin; }
+    private void recalcularHoraFin() {
+        this.horaFin = (this.horaInicio != null) ? this.horaInicio.plusMinutes(this.duracionMinutos) : null;
+    }
+
     public LocalTime getHoraInicio() { return horaInicio; }
     public void setHoraInicio(LocalTime horaInicio) {
         this.horaInicio = horaInicio;
-        this.horaFin = (horaInicio != null) ? horaInicio.plusMinutes(this.duracionMinutos) : null;
+        recalcularHoraFin();
     }
-
-    public LocalTime getHoraFin() { return horaFin; }
-    public void setHoraFin(LocalTime horaFin) { this.horaFin = horaFin; }
 
     public int getDuracionMinutos() { return duracionMinutos; }
     public void setDuracionMinutos(int duracionMinutos) {
         this.duracionMinutos = duracionMinutos;
-        this.horaFin = (this.horaInicio != null) ? this.horaInicio.plusMinutes(duracionMinutos) : null;
+        recalcularHoraFin();
     }
 
     public EstadoReserva getEstado() { return estado; }
