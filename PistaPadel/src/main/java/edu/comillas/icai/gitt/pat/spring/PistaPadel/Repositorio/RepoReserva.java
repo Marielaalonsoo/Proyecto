@@ -2,12 +2,12 @@ package edu.comillas.icai.gitt.pat.spring.PistaPadel.Repositorio;
 
 import edu.comillas.icai.gitt.pat.spring.PistaPadel.Modelo.EstadoReserva;
 import edu.comillas.icai.gitt.pat.spring.PistaPadel.Modelo.Reserva;
-import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.repository.CrudRepository;
 
 import java.time.LocalDate;
 import java.util.List;
 
-public interface RepoReserva extends JpaRepository<Reserva, Integer> {
+public interface RepoReserva extends CrudRepository<Reserva, Integer> {
 
     List<Reserva> findByUsuario_IdUsuarioOrderByFechaReservaAscHoraInicioAsc(Integer idUsuario); //todas las reservas de un usuario en concreto
 
