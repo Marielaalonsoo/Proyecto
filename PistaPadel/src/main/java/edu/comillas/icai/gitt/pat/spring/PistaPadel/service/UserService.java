@@ -36,7 +36,8 @@ public class UserService {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "No autorizado");
         }
 
-        List<Usuario> todos = new ArrayList<>(repoUsuario.findAll());
+        List<Usuario> todos = new ArrayList<>();
+        repoUsuario.findAll().forEach(todos::add);
         todos.sort(Comparator.comparing(Usuario::getIdUsuario));
 
         List<Map<String, Object>> salida = new ArrayList<>();
