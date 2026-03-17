@@ -35,11 +35,15 @@ public class Usuario {
         @Column(nullable = false)
         private Rol rol;
 
-        @Column(nullable = false)
+        @Column(nullable = false, updatable = false)
         private LocalDateTime fechaRegistro;
+        @PrePersist
+        public void prePersist() {
+            if (fechaRegistro == null) fechaRegistro = LocalDateTime.now();
+        }
 
         @Column(nullable = false)
-        private boolean activo;
+        private boolean activo = true;
 
         @JsonIgnore
         @OneToMany(mappedBy = "usuario")
@@ -92,6 +96,10 @@ public class Usuario {
 
     public LocalDateTime getFechaRegistro() {
         return fechaRegistro;
+    }
+
+    public List<Reserva> getReservas() {
+        return reservas;
     }
 
     public boolean isActivo() {
