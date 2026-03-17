@@ -23,11 +23,14 @@ public class AuthService {
 
     private static final Logger logger = LoggerFactory.getLogger(AuthService.class);
 
-    @Autowired
-    RepoUsuario repoUsuario;
-    @Autowired
-    PasswordEncoder passwordEncoder;
-//
+    private final RepoUsuario repoUsuario;
+    private final PasswordEncoder passwordEncoder;
+
+    public AuthService(RepoUsuario repoUsuario, PasswordEncoder passwordEncoder) {
+        this.repoUsuario = repoUsuario;
+        this.passwordEncoder = passwordEncoder;
+    }
+
     public Map<String, Object> register(ModeloUsuario req) {
         String emailNorm = normalizarEmail(req.email());
 
