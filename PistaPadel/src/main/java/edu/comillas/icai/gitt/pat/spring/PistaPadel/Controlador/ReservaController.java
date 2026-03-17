@@ -1,12 +1,10 @@
 package edu.comillas.icai.gitt.pat.spring.PistaPadel.Controlador;
 
-//import edu.comillas.icai.gitt.pat.spring.PistaPadel.Almacen.AlmacenMemoria;
-import edu.comillas.icai.gitt.pat.spring.PistaPadel.Repositorio.RepoPista;
-import edu.comillas.icai.gitt.pat.spring.PistaPadel.Repositorio.RepoReserva;
-import edu.comillas.icai.gitt.pat.spring.PistaPadel.Repositorio.RepoUsuario;
 import edu.comillas.icai.gitt.pat.spring.PistaPadel.Excepciones.ExcepcionDatosIncorrectos;
-import edu.comillas.icai.gitt.pat.spring.PistaPadel.Modelo.*;
-
+import edu.comillas.icai.gitt.pat.spring.PistaPadel.Modelo.ModeloReserva;
+import edu.comillas.icai.gitt.pat.spring.PistaPadel.Modelo.ModeloReservaPatch;
+import edu.comillas.icai.gitt.pat.spring.PistaPadel.Modelo.Reserva;
+import edu.comillas.icai.gitt.pat.spring.PistaPadel.service.ReservaService;
 import jakarta.validation.Valid;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -14,13 +12,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.server.ResponseStatusException;
 
 import java.security.Principal;
-import java.time.LocalDate;
-import java.time.LocalDateTime;
-import java.time.LocalTime;
-import java.util.*;
 
 @RestController
 @RequestMapping("/pistaPadel")
@@ -28,123 +21,12 @@ public class ReservaController {
 
     private static final Logger logger = LoggerFactory.getLogger(ReservaController.class);
 
-    //private final AlmacenMemoria almacen;
-    //public ReservaController(AlmacenMemoria almacen) {
-    //    this.almacen = almacen;
-    //}
+    private final ReservaService reservaService;
 
-    private final RepoReserva repoReserva;
-    private final RepoUsuario repoUsuario;
-    private final RepoPista repoPista;
-
-    public ReservaController(RepoReserva repoReserva, RepoUsuario repoUsuario, RepoPista repoPista) {
-        this.repoReserva = repoReserva;
-        this.repoUsuario = repoUsuario;
-        this.repoPista = repoPista;
+    public ReservaController(ReservaService reservaService) {
+        this.reservaService = reservaService;
     }
 
-    private Usuario getUsuarioAutenticado(Principal principal) {
-        if (principal == null || principal.getName() == null) {
-            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "No autenticado");
-        }
-
-        String username = principal.getName().trim();
-        if (username.isEmpty()) {
-            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "No autenticado");
-        }
-
-        String emailNorm = username.toLowerCase().trim();
-
-        Usuario u = repoUsuario.findByEmailIgnoreCase(emailNorm).orElse(null);
-        if (u != null) {
-            if (!u.isActivo()) {
-                throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Usuario inactivo");
-            }
-            return u;
-        }
-
-        Usuario nuevo = new Usuario();
-        nuevo.setIdUsuario(null);
-        nuevo.setNombre(username);
-        nuevo.setApellidos("");
-        nuevo.setEmail(emailNorm);
-        nuevo.setPasswordHash("");
-        nuevo.setTelefono("");
-        nuevo.setRol("admin".equalsIgnoreCase(username) ? Rol.ADMIN : Rol.USER);
-        nuevo.setFechaRegistro(LocalDateTime.now());
-        nuevo.setActivo(true);
-
-        return repoUsuario.save(nuevo);
-    }
-
-    // Nunca se llama a esAdmin(), solo !esAdmin() (no importa)
-    private boolean esAdmin(Usuario u) {
-        return u.getRol() == Rol.ADMIN;
-    }
-
-    private void exigirDuenoOAdmin(Usuario u, Reserva r) {
-        boolean dueno = r.getUsuario().getIdUsuario().equals(u.getIdUsuario());
-        if (!dueno && !esAdmin(u)) throw new ResponseStatusException(HttpStatus.FORBIDDEN, "No autorizado");
-    }
-
-    private LocalDateTime parseFromTo(String s, boolean endOfDayIfDate) {
-        if (s == null) return null;
-        try {
-            return LocalDateTime.parse(s);
-        } catch (Exception ignored) { }
-        try {
-            LocalDate d = LocalDate.parse(s);
-            return endOfDayIfDate ? d.atTime(23, 59, 59) : d.atStartOfDay();
-        } catch (Exception e) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "from/to mal formato");
-        }
-    }
-
-    private LocalDateTime inicioReserva(Reserva r) {
-        return LocalDateTime.of(r.getFechaReserva(), r.getHoraInicio());
-    }
-
-    private List<Reserva> reservasActivasDePistaEnFecha(Integer courtId, LocalDate date) {
-        return repoReserva.findByPista_IdPistaAndFechaReservaAndEstadoOrderByHoraInicioAsc(
-                courtId, date, EstadoReserva.ACTIVA
-        );
-    }
-
-    private boolean haySolape(Integer courtId, LocalDate date, LocalTime inicio, LocalTime fin) {
-        List<Reserva> reservas = reservasActivasDePistaEnFecha(courtId, date);
-
-        for (Reserva r : reservas) {
-            LocalTime existenteInicio = r.getHoraInicio();
-            LocalTime existenteFin = r.getHoraFin();
-
-            boolean solapa = inicio.isBefore(existenteFin) && fin.isAfter(existenteInicio);
-            if (solapa) {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    private boolean haySolapeExcluyendo(Integer reservaId, Integer courtId, LocalDate date, LocalTime inicio, LocalTime fin) {
-        List<Reserva> reservas = reservasActivasDePistaEnFecha(courtId, date);
-
-        for (Reserva r : reservas) {
-            if (r.getIdReserva().equals(reservaId)) {
-                continue;
-            }
-
-            LocalTime existenteInicio = r.getHoraInicio();
-            LocalTime existenteFin = r.getHoraFin();
-
-            boolean solapa = inicio.isBefore(existenteFin) && fin.isAfter(existenteInicio);
-            if (solapa) {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    // POST /pistaPadel/reservations  -> 201 / 400 / 401 / 404 / 409
     @PostMapping("/reservations")
     public ResponseEntity<?> crearReserva(@Valid @RequestBody ModeloReserva body,
                                           BindingResult br,
@@ -152,247 +34,68 @@ public class ReservaController {
 
         if (br.hasErrors()) throw new ExcepcionDatosIncorrectos(br);
 
-        Usuario u = getUsuarioAutenticado(principal);
-
-        if (body.durationMinutes() <= 0) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "durationMinutes inválido");
-        }
-
-        Pista pista = repoPista.findById(body.courtId())
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "La pista no existe"));
-
-        if (!pista.isActiva()) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT, "La pista está inactiva");
-        }
-
-        LocalTime inicio = body.time();
-        LocalTime fin = inicio.plusMinutes(body.durationMinutes());
-
-        if (haySolape(body.courtId(), body.date(), inicio, fin)) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT, "Slot ocupado");
-        }
-
-        Reserva nueva = new Reserva(
-                null,
-                u,
-                pista,
-                body.date(),
-                inicio,
-                body.durationMinutes(),
-                EstadoReserva.ACTIVA,
-                LocalDateTime.now()
-        );
-
-        Reserva guardada = repoReserva.save(nueva);
-        logger.info("Reserva creada: idReserva={}, userId={}, courtId={}", guardada.getIdReserva(), u.getIdUsuario(), body.courtId());
+        Reserva guardada = reservaService.crearReserva(body, principal);
+        logger.info("Reserva creada: idReserva={}", guardada.getIdReserva());
 
         return ResponseEntity.status(HttpStatus.CREATED).body(guardada);
     }
 
-    // GET /pistaPadel/reservations Mis reservas  -> 200 / 401
     @GetMapping("/reservations")
     public ResponseEntity<?> misReservas(@RequestParam(required = false) String from,
                                          @RequestParam(required = false) String to,
                                          Principal principal) {
 
-        Usuario u = getUsuarioAutenticado(principal);
-
-        LocalDateTime fromDT = parseFromTo(from, false);
-        LocalDateTime toDT = parseFromTo(to, true);
-
-        List<Reserva> res = new ArrayList<>(
-                repoReserva.findByUsuario_IdUsuarioOrderByFechaReservaAscHoraInicioAsc(u.getIdUsuario())
-        );
-
-        if (fromDT != null || toDT != null) {
-            res.removeIf(r -> {
-                LocalDateTime ini = inicioReserva(r);
-                if (fromDT != null && ini.isBefore(fromDT)) return true;
-                if (toDT != null && ini.isAfter(toDT)) return true;
-                return false;
-            });
-        }
-
-        return ResponseEntity.ok(res);
+        return ResponseEntity.ok(reservaService.obtenerMisReservas(from, to, principal));
     }
 
-    // GET /pistaPadel/reservations/{reservationId} -> 200 / 401 / 403 / 404
     @GetMapping("/reservations/{reservationId}")
     public ResponseEntity<?> obtenerReserva(@PathVariable Integer reservationId,
                                             Principal principal) {
 
-        Usuario u = getUsuarioAutenticado(principal);
-
-        Reserva r = repoReserva.findById(reservationId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "No existe"));
-
-        exigirDuenoOAdmin(u, r);
-        return ResponseEntity.ok(r);
+        return ResponseEntity.ok(reservaService.obtenerReserva(reservationId, principal));
     }
 
-    // DELETE /pistaPadel/reservations/{reservationId} -> 204 / 401 / 403 / 404 / 409
     @DeleteMapping("/reservations/{reservationId}")
     public ResponseEntity<?> cancelarReserva(@PathVariable Integer reservationId,
                                              Principal principal) {
 
-        Usuario u = getUsuarioAutenticado(principal);
+        reservaService.cancelarReserva(reservationId, principal);
+        logger.info("Reserva cancelada: idReserva={}", reservationId);
 
-        Reserva r = repoReserva.findById(reservationId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "No existe"));
-
-        exigirDuenoOAdmin(u, r);
-
-        if (r.getEstado() == EstadoReserva.CANCELADA) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT, "Ya cancelada");
-        }
-
-        r.setEstado(EstadoReserva.CANCELADA);
-        repoReserva.save(r);
-
-        logger.info("Reserva cancelada: idReserva={}, porUserId={}", reservationId, u.getIdUsuario());
         return ResponseEntity.noContent().build();
     }
 
-    // PATCH /pistaPadel/reservations/{reservationId} -> 200 / 400 / 401 / 403 / 404 / 409
     @PatchMapping("/reservations/{reservationId}")
     public ResponseEntity<?> modificarReserva(@PathVariable Integer reservationId,
                                               @RequestBody ModeloReservaPatch body,
                                               Principal principal) {
 
-        Usuario u = getUsuarioAutenticado(principal);
+        Reserva guardada = reservaService.modificarReserva(reservationId, body, principal);
+        logger.info("Reserva modificada: idReserva={}", reservationId);
 
-        Reserva actual = repoReserva.findById(reservationId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "No existe"));
-
-        exigirDuenoOAdmin(u, actual);
-
-        if (actual.getEstado() != EstadoReserva.ACTIVA) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT, "Reserva no activa");
-        }
-
-        if (body == null) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Body vacío");
-        }
-
-        Integer newCourtId = (body.courtId() != null) ? body.courtId() : actual.getPista().getIdPista();
-        LocalDate newDate = (body.date() != null) ? body.date() : actual.getFechaReserva();
-        LocalTime newTime = (body.time() != null) ? body.time() : actual.getHoraInicio();
-        Integer newDur = (body.durationMinutes() != null) ? body.durationMinutes() : actual.getDuracionMinutos();
-
-        boolean cambiaAlgo =
-                !Objects.equals(newCourtId, actual.getPista().getIdPista()) ||
-                        !Objects.equals(newDate, actual.getFechaReserva()) ||
-                        !Objects.equals(newTime, actual.getHoraInicio()) ||
-                        !Objects.equals(newDur, actual.getDuracionMinutos());
-
-        if (!cambiaAlgo) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "No hay cambios");
-        }
-
-        if (newDur <= 0) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "durationMinutes inválido");
-        }
-
-        Pista pista = repoPista.findById(newCourtId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "La pista no existe"));
-
-        if (!pista.isActiva()) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT, "La pista está inactiva");
-        }
-
-        LocalTime newEnd = newTime.plusMinutes(newDur);
-
-        if (haySolapeExcluyendo(actual.getIdReserva(), newCourtId, newDate, newTime, newEnd)) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT, "Slot ocupado");
-        }
-
-        actual.setPista(pista);
-        actual.setFechaReserva(newDate);
-        actual.setHoraInicio(newTime);
-        actual.setDuracionMinutos(newDur);
-
-        Reserva guardada = repoReserva.save(actual);
-
-        logger.info("Reserva modificada: idReserva={}, porUserId={}", reservationId, u.getIdUsuario());
         return ResponseEntity.ok(guardada);
     }
 
-    // GET /pistaPadel/admin/reservations Ver reservas de todos -> 200 / 401 / 403
     @GetMapping("/admin/reservations")
     public ResponseEntity<?> adminReservas(@RequestParam(required = false) String date,
                                            @RequestParam(required = false) Integer courtId,
                                            @RequestParam(required = false) Integer userId,
                                            Principal principal) {
 
-        Usuario u = getUsuarioAutenticado(principal);
-        if (!esAdmin(u)) throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Solo admin");
-
-        LocalDate d = null;
-        if (date != null) {
-            try {
-                d = LocalDate.parse(date);
-            } catch (Exception e) {
-                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "date mal formato");
-            }
-        }
-
-        List<Reserva> res = new ArrayList<>();
-        repoReserva.findAll().forEach(res::add);
-
-        LocalDate finalD = d;
-        res.removeIf(r ->
-                (finalD != null && !finalD.equals(r.getFechaReserva())) ||
-                        (courtId != null && !courtId.equals(r.getPista().getIdPista())) ||
-                        (userId != null && !userId.equals(r.getUsuario().getIdUsuario()))
-        );
-
-        res.sort(Comparator.comparing(Reserva::getFechaReserva).thenComparing(Reserva::getHoraInicio));
-        return ResponseEntity.ok(res);
+        return ResponseEntity.ok(reservaService.obtenerReservasAdmin(date, courtId, userId, principal));
     }
 
-    // GET Availability
     @GetMapping("/courts/{courtId}/availability")
     public ResponseEntity<?> disponibilidadPista(@PathVariable int courtId,
                                                  @RequestParam String date) {
 
-        LocalDate d;
-        try {
-            d = LocalDate.parse(date);
-        } catch (Exception e) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "date mal formato");
-        }
-
-        if (!repoPista.existsById(courtId)) {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Pista no encontrada");
-        }
-
-        return ResponseEntity.ok(reservasActivasDePistaEnFecha(courtId, d));
+        return ResponseEntity.ok(reservaService.obtenerDisponibilidadPista(courtId, date));
     }
 
     @GetMapping("/availability")
     public ResponseEntity<?> disponibilidadGeneral(@RequestParam String date,
                                                    @RequestParam(required = false) Integer courtId) {
 
-        LocalDate d;
-        try {
-            d = LocalDate.parse(date);
-        } catch (Exception e) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "date mal formato");
-        }
-
-        if (courtId != null) {
-            if (!repoPista.existsById(courtId)) {
-                throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Pista no encontrada");
-            }
-            return ResponseEntity.ok(reservasActivasDePistaEnFecha(courtId, d));
-        }
-
-        List<Reserva> resultado = new ArrayList<>();
-        repoReserva.findAll().forEach(resultado::add);
-        resultado.removeIf(r -> r.getEstado() != EstadoReserva.ACTIVA || !d.equals(r.getFechaReserva()));
-        resultado.sort(Comparator.comparing(Reserva::getPista, Comparator.comparing(Pista::getIdPista))
-                .thenComparing(Reserva::getHoraInicio));
-
-        return ResponseEntity.ok(resultado);
+        return ResponseEntity.ok(reservaService.obtenerDisponibilidadGeneral(date, courtId));
     }
 }
