@@ -1,9 +1,7 @@
 package edu.comillas.icai.gitt.pat.spring.PistaPadel.Modelo;
 
 import java.time.LocalDate;
-
 import jakarta.persistence.*;
-import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -29,8 +27,12 @@ public class Pista {
     @Column(nullable = false)
     private boolean activa = true;
 
-    @Column(nullable = false)
+    @Column(nullable = false, updatable = false)
     private LocalDate fechaAlta;
+    @PrePersist
+    public void prePersist() {
+        if (fechaAlta == null) fechaAlta = LocalDate.now();
+    }
 
     @JsonIgnore
     @OneToMany(mappedBy = "pista")
