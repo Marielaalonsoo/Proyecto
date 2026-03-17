@@ -1,5 +1,6 @@
 package edu.comillas.icai.gitt.pat.spring.PistaPadel.Modelo;
 
+
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 

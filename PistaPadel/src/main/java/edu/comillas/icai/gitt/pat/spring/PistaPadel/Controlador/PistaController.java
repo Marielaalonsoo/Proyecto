@@ -8,6 +8,7 @@ import edu.comillas.icai.gitt.pat.spring.PistaPadel.Modelo.Pista;
 import jakarta.validation.Valid;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -28,14 +29,17 @@ public class PistaController {
     private static final Logger logger = LoggerFactory.getLogger(PistaController.class);
 
     //private final AlmacenMemoria almacen;
-    private final RepoPista repoPista;
+//    private final RepoPista repoPista;
+//
+//    //public PistaController(AlmacenMemoria almacen) {
+//        //this.almacen = almacen;
+//    //}
+//    public PistaController(RepoPista repoPista) {
+//        this.repoPista = repoPista;
+//    }
 
-    //public PistaController(AlmacenMemoria almacen) {
-        //this.almacen = almacen;
-    //}
-    public PistaController(RepoPista repoPista) {
-        this.repoPista = repoPista;
-    }
+    @Autowired
+    RepoPista repoPista;
 
     // GET /pistaPadel/courts active=true/false
     // GET /pistaPadel/courts active=true/false

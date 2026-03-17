@@ -7,7 +7,8 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.server.ResponseStatusException;
 
 @RestControllerAdvice
-public class ManejadorErroresGlobales {
+public class
+ManejadorErroresGlobales {
 
     @ExceptionHandler(ExcepcionDatosIncorrectos.class)
     public ResponseEntity<?> datosIncorrectos(ExcepcionDatosIncorrectos ex) {
