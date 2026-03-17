@@ -336,7 +336,8 @@ public class ReservaController {
             }
         }
 
-        List<Reserva> res = new ArrayList<>(repoReserva.findAll());
+        List<Reserva> res = new ArrayList<>();
+        repoReserva.findAll().forEach(res::add);
 
         LocalDate finalD = d;
         res.removeIf(r ->
@@ -386,7 +387,8 @@ public class ReservaController {
             return ResponseEntity.ok(reservasActivasDePistaEnFecha(courtId, d));
         }
 
-        List<Reserva> resultado = new ArrayList<>(repoReserva.findAll());
+        List<Reserva> resultado = new ArrayList<>();
+        repoReserva.findAll().forEach(resultado::add);
         resultado.removeIf(r -> r.getEstado() != EstadoReserva.ACTIVA || !d.equals(r.getFechaReserva()));
         resultado.sort(Comparator.comparing(Reserva::getPista, Comparator.comparing(Pista::getIdPista))
                 .thenComparing(Reserva::getHoraInicio));

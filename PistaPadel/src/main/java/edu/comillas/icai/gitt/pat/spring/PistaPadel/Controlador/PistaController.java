@@ -19,6 +19,7 @@ import org.springframework.web.server.ResponseStatusException;
 //import java.util.ArrayList;
 //import java.util.Comparator;
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.List;
 import edu.comillas.icai.gitt.pat.spring.PistaPadel.Repositorio.RepoPista;
 
@@ -46,12 +47,12 @@ public class PistaController {
     @GetMapping
     public ResponseEntity<?> listar(@RequestParam(name = "active", required = false) Boolean active) {
 
-        List<Pista> res;
+        List<Pista> res = new ArrayList<>();
 
         if (active != null) {
             res = repoPista.findByActiva(active);
         } else {
-            res = repoPista.findAll();
+            repoPista.findAll().forEach(res::add);
         }
 
         res.sort(java.util.Comparator.comparing(Pista::getIdPista));
