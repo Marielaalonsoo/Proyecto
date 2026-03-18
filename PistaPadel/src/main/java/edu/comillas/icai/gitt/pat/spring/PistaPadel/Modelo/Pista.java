@@ -5,7 +5,6 @@ import jakarta.persistence.*;
 import java.util.ArrayList;
 import java.util.List;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
 
 @Entity
 @Table(name = "pistas")
@@ -34,7 +33,6 @@ public class Pista {
         if (fechaAlta == null) fechaAlta = LocalDate.now();
     }
 
-    @JsonIgnore
     @OneToMany(mappedBy = "pista")
     private List<Reserva> reservas = new ArrayList<>();
 

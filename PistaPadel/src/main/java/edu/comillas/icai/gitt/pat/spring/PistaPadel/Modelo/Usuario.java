@@ -6,7 +6,6 @@ import java.util.List;
 
 import jakarta.persistence.*;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
 
 @Entity
 @Table(name = "usuarios")
@@ -45,7 +44,6 @@ public class Usuario {
         @Column(nullable = false)
         private boolean activo = true;
 
-        @JsonIgnore
         @OneToMany(mappedBy = "usuario")
         private List<Reserva> reservas = new ArrayList<>();
 
