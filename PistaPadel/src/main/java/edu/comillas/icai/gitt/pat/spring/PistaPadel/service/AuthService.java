@@ -55,8 +55,6 @@ public class AuthService {
     }
 
     public Map<String, Object> login(ModeloLogin req, Principal principal) {
-        // Con httpBasic, Spring autentica antes de llegar aquí.
-        // Así que este método solo confirma el usuario autenticado actual.
         if (principal == null) {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "No autenticado");
         }
