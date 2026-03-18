@@ -75,6 +75,10 @@ public class UserService {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "No autorizado");
         }
 
+        if (req == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Body vacío");
+        }
+
         Usuario u = repoUsuario.findById(userId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Usuario no existe"));
 
@@ -96,6 +100,8 @@ public class UserService {
 
         if (req.email() != null) {
             String nuevoEmail = req.email().toLowerCase().trim();
+            if (nuevoEmail.isEmpty()) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Email vacío");}
             String emailActual = u.getEmail().toLowerCase().trim();
 
             if (!nuevoEmail.equals(emailActual)) {
