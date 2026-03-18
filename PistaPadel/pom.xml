@@ -59,6 +59,12 @@
 			<artifactId>h2</artifactId>
 		</dependency>
 
+		<!-- Consola -->
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-h2console</artifactId>
+		</dependency>
+
 		<!-- Desarrollo -->
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
