@@ -65,7 +65,12 @@ class ReservaServiceTest {
 
     @Test
     void crearReservaOkTest() {
-        ModeloReserva body = new ModeloReserva(1, LocalDate.of(2026, 3, 20), LocalTime.of(18, 0), 90);
+        ModeloReserva body = new ModeloReserva(
+                1,
+                LocalDate.of(2026, 3, 20),
+                LocalTime.of(18, 0),
+                90
+        );
 
         Reserva reserva = reservaService.crearReserva(body, principal);
 
@@ -90,19 +95,48 @@ class ReservaServiceTest {
         );
         repoReserva.save(existente);
 
-        ModeloReserva body = new ModeloReserva(1, LocalDate.of(2026, 3, 20), LocalTime.of(18, 0), 90);
+        ModeloReserva body = new ModeloReserva(
+                1,
+                LocalDate.of(2026, 3, 20),
+                LocalTime.of(18, 0),
+                90
+        );
 
         assertThrows(ResponseStatusException.class, () -> reservaService.crearReserva(body, principal));
+    }
+
+    @Test
+    void crearReservaPistaInactivaTest() {
+        pista.setActiva(false);
+        repoPista.save(pista);
+
+        ModeloReserva body = new ModeloReserva(
+                1,
+                LocalDate.of(2026, 3, 20),
+                LocalTime.of(18, 0),
+                90
+        );
+
+        ResponseStatusException ex = assertThrows(
+                ResponseStatusException.class,
+                () -> reservaService.crearReserva(body, principal)
+        );
+
+        assertEquals(409, ex.getStatusCode().value());
     }
 
     static class RepoUsuarioFake implements RepoUsuario {
         private final List<Usuario> usuarios = new ArrayList<>();
 
-        void guardar(Usuario u) { usuarios.add(u); }
+        void guardar(Usuario u) {
+            usuarios.add(u);
+        }
 
         @Override
         public Optional<Usuario> findByEmailIgnoreCase(String email) {
-            return usuarios.stream().filter(u -> u.getEmail().equalsIgnoreCase(email)).findFirst();
+            return usuarios.stream()
+                    .filter(u -> u.getEmail().equalsIgnoreCase(email))
+                    .findFirst();
         }
 
         @Override
@@ -112,33 +146,78 @@ class ReservaServiceTest {
 
         @Override
         public <S extends Usuario> S save(S entity) {
-            if (entity.getIdUsuario() == null) entity.setIdUsuario(usuarios.size() + 1);
+            if (entity.getIdUsuario() == null) {
+                entity.setIdUsuario(usuarios.size() + 1);
+            }
             usuarios.removeIf(u -> u.getIdUsuario().equals(entity.getIdUsuario()));
             usuarios.add(entity);
             return entity;
         }
 
-        @Override public Optional<Usuario> findById(Integer integer) { return usuarios.stream().filter(u -> u.getIdUsuario().equals(integer)).findFirst(); }
-        @Override public Iterable<Usuario> findAll() { return usuarios; }
-        @Override public boolean existsById(Integer integer) { return usuarios.stream().anyMatch(u -> u.getIdUsuario().equals(integer)); }
-        @Override public long count() { return usuarios.size(); }
-        @Override public void deleteById(Integer integer) {}
-        @Override public void delete(Usuario entity) {}
-        @Override public void deleteAllById(Iterable<? extends Integer> integers) {}
-        @Override public void deleteAll(Iterable<? extends Usuario> entities) {}
-        @Override public void deleteAll() { usuarios.clear(); }
-        @Override public <S extends Usuario> Iterable<S> saveAll(Iterable<S> entities) { return entities; }
-        @Override public Iterable<Usuario> findAllById(Iterable<Integer> integers) { return usuarios; }
+        @Override
+        public Optional<Usuario> findById(Integer integer) {
+            return usuarios.stream().filter(u -> u.getIdUsuario().equals(integer)).findFirst();
+        }
+
+        @Override
+        public Iterable<Usuario> findAll() {
+            return usuarios;
+        }
+
+        @Override
+        public boolean existsById(Integer integer) {
+            return usuarios.stream().anyMatch(u -> u.getIdUsuario().equals(integer));
+        }
+
+        @Override
+        public long count() {
+            return usuarios.size();
+        }
+
+        @Override
+        public void deleteById(Integer integer) {
+        }
+
+        @Override
+        public void delete(Usuario entity) {
+        }
+
+        @Override
+        public void deleteAllById(Iterable<? extends Integer> integers) {
+        }
+
+        @Override
+        public void deleteAll(Iterable<? extends Usuario> entities) {
+        }
+
+        @Override
+        public void deleteAll() {
+            usuarios.clear();
+        }
+
+        @Override
+        public <S extends Usuario> Iterable<S> saveAll(Iterable<S> entities) {
+            return entities;
+        }
+
+        @Override
+        public Iterable<Usuario> findAllById(Iterable<Integer> integers) {
+            return usuarios;
+        }
     }
 
     static class RepoPistaFake implements RepoPista {
         private final List<Pista> pistas = new ArrayList<>();
 
-        void guardar(Pista p) { pistas.add(p); }
+        void guardar(Pista p) {
+            pistas.add(p);
+        }
 
         @Override
         public Optional<Pista> findByNombreIgnoreCase(String nombre) {
-            return pistas.stream().filter(p -> p.getNombre().equalsIgnoreCase(nombre)).findFirst();
+            return pistas.stream()
+                    .filter(p -> p.getNombre().equalsIgnoreCase(nombre))
+                    .findFirst();
         }
 
         @Override
@@ -153,23 +232,64 @@ class ReservaServiceTest {
 
         @Override
         public <S extends Pista> S save(S entity) {
-            if (entity.getIdPista() == null) entity.setIdPista(pistas.size() + 1);
+            if (entity.getIdPista() == null) {
+                entity.setIdPista(pistas.size() + 1);
+            }
             pistas.removeIf(p -> p.getIdPista().equals(entity.getIdPista()));
             pistas.add(entity);
             return entity;
         }
 
-        @Override public Optional<Pista> findById(Integer integer) { return pistas.stream().filter(p -> p.getIdPista().equals(integer)).findFirst(); }
-        @Override public Iterable<Pista> findAll() { return pistas; }
-        @Override public boolean existsById(Integer integer) { return pistas.stream().anyMatch(p -> p.getIdPista().equals(integer)); }
-        @Override public long count() { return pistas.size(); }
-        @Override public void deleteById(Integer integer) {}
-        @Override public void delete(Pista entity) {}
-        @Override public void deleteAllById(Iterable<? extends Integer> integers) {}
-        @Override public void deleteAll(Iterable<? extends Pista> entities) {}
-        @Override public void deleteAll() { pistas.clear(); }
-        @Override public <S extends Pista> Iterable<S> saveAll(Iterable<S> entities) { return entities; }
-        @Override public Iterable<Pista> findAllById(Iterable<Integer> integers) { return pistas; }
+        @Override
+        public Optional<Pista> findById(Integer integer) {
+            return pistas.stream().filter(p -> p.getIdPista().equals(integer)).findFirst();
+        }
+
+        @Override
+        public Iterable<Pista> findAll() {
+            return pistas;
+        }
+
+        @Override
+        public boolean existsById(Integer integer) {
+            return pistas.stream().anyMatch(p -> p.getIdPista().equals(integer));
+        }
+
+        @Override
+        public long count() {
+            return pistas.size();
+        }
+
+        @Override
+        public void deleteById(Integer integer) {
+        }
+
+        @Override
+        public void delete(Pista entity) {
+        }
+
+        @Override
+        public void deleteAllById(Iterable<? extends Integer> integers) {
+        }
+
+        @Override
+        public void deleteAll(Iterable<? extends Pista> entities) {
+        }
+
+        @Override
+        public void deleteAll() {
+            pistas.clear();
+        }
+
+        @Override
+        public <S extends Pista> Iterable<S> saveAll(Iterable<S> entities) {
+            return entities;
+        }
+
+        @Override
+        public Iterable<Pista> findAllById(Iterable<Integer> integers) {
+            return pistas;
+        }
     }
 
     static class RepoReservaFake implements RepoReserva {
@@ -177,11 +297,15 @@ class ReservaServiceTest {
 
         @Override
         public List<Reserva> findByUsuario_IdUsuarioOrderByFechaReservaAscHoraInicioAsc(Integer idUsuario) {
-            return reservas.stream().filter(r -> r.getUsuario().getIdUsuario().equals(idUsuario)).toList();
+            return reservas.stream()
+                    .filter(r -> r.getUsuario().getIdUsuario().equals(idUsuario))
+                    .toList();
         }
 
         @Override
-        public List<Reserva> findByPista_IdPistaAndFechaReservaAndEstadoOrderByHoraInicioAsc(Integer idPista, LocalDate fechaReserva, EstadoReserva estado) {
+        public List<Reserva> findByPista_IdPistaAndFechaReservaAndEstadoOrderByHoraInicioAsc(
+                Integer idPista, LocalDate fechaReserva, EstadoReserva estado
+        ) {
             return reservas.stream()
                     .filter(r -> r.getPista().getIdPista().equals(idPista)
                             && r.getFechaReserva().equals(fechaReserva)
@@ -191,22 +315,63 @@ class ReservaServiceTest {
 
         @Override
         public <S extends Reserva> S save(S entity) {
-            if (entity.getIdReserva() == null) entity.setIdReserva(reservas.size() + 1);
+            if (entity.getIdReserva() == null) {
+                entity.setIdReserva(reservas.size() + 1);
+            }
             reservas.removeIf(r -> r.getIdReserva().equals(entity.getIdReserva()));
             reservas.add(entity);
             return entity;
         }
 
-        @Override public Optional<Reserva> findById(Integer integer) { return reservas.stream().filter(r -> r.getIdReserva().equals(integer)).findFirst(); }
-        @Override public Iterable<Reserva> findAll() { return reservas; }
-        @Override public boolean existsById(Integer integer) { return reservas.stream().anyMatch(r -> r.getIdReserva().equals(integer)); }
-        @Override public long count() { return reservas.size(); }
-        @Override public void deleteById(Integer integer) {}
-        @Override public void delete(Reserva entity) {}
-        @Override public void deleteAllById(Iterable<? extends Integer> integers) {}
-        @Override public void deleteAll(Iterable<? extends Reserva> entities) {}
-        @Override public void deleteAll() { reservas.clear(); }
-        @Override public <S extends Reserva> Iterable<S> saveAll(Iterable<S> entities) { return entities; }
-        @Override public Iterable<Reserva> findAllById(Iterable<Integer> integers) { return reservas; }
+        @Override
+        public Optional<Reserva> findById(Integer integer) {
+            return reservas.stream().filter(r -> r.getIdReserva().equals(integer)).findFirst();
+        }
+
+        @Override
+        public Iterable<Reserva> findAll() {
+            return reservas;
+        }
+
+        @Override
+        public boolean existsById(Integer integer) {
+            return reservas.stream().anyMatch(r -> r.getIdReserva().equals(integer));
+        }
+
+        @Override
+        public long count() {
+            return reservas.size();
+        }
+
+        @Override
+        public void deleteById(Integer integer) {
+        }
+
+        @Override
+        public void delete(Reserva entity) {
+        }
+
+        @Override
+        public void deleteAllById(Iterable<? extends Integer> integers) {
+        }
+
+        @Override
+        public void deleteAll(Iterable<? extends Reserva> entities) {
+        }
+
+        @Override
+        public void deleteAll() {
+            reservas.clear();
+        }
+
+        @Override
+        public <S extends Reserva> Iterable<S> saveAll(Iterable<S> entities) {
+            return entities;
+        }
+
+        @Override
+        public Iterable<Reserva> findAllById(Iterable<Integer> integers) {
+            return reservas;
+        }
     }
 }

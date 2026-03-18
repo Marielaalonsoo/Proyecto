@@ -28,7 +28,13 @@ class PistaServiceTest {
 
     @Test
     void crearPistaOkTest() {
-        ModeloPistaCrear req = new ModeloPistaCrear("Pista 1", "Club Central", 20, true, LocalDate.of(2026, 3, 17));
+        ModeloPistaCrear req = new ModeloPistaCrear(
+                "Pista 1",
+                "Club Central",
+                20,
+                true,
+                LocalDate.of(2026, 3, 17)
+        );
 
         Pista pista = pistaService.crear(req);
 
@@ -48,9 +54,33 @@ class PistaServiceTest {
         existente.setFechaAlta(LocalDate.now());
         repoPista.save(existente);
 
-        ModeloPistaCrear req = new ModeloPistaCrear("Pista 1", "Otra ubicacion", 25, true, LocalDate.of(2026, 3, 17));
+        ModeloPistaCrear req = new ModeloPistaCrear(
+                "Pista 1",
+                "Otra ubicacion",
+                25,
+                true,
+                LocalDate.of(2026, 3, 17)
+        );
 
         assertThrows(ResponseStatusException.class, () -> pistaService.crear(req));
+    }
+
+    @Test
+    void crearPistaPrecioNegativoTest() {
+        ModeloPistaCrear req = new ModeloPistaCrear(
+                "Pista 2",
+                "Club Norte",
+                -5,
+                true,
+                LocalDate.of(2026, 3, 17)
+        );
+
+        ResponseStatusException ex = assertThrows(
+                ResponseStatusException.class,
+                () -> pistaService.crear(req)
+        );
+
+        assertEquals(400, ex.getStatusCode().value());
     }
 
     static class RepoPistaFake implements RepoPista {
@@ -58,7 +88,9 @@ class PistaServiceTest {
 
         @Override
         public Optional<Pista> findByNombreIgnoreCase(String nombre) {
-            return pistas.stream().filter(p -> p.getNombre().equalsIgnoreCase(nombre)).findFirst();
+            return pistas.stream()
+                    .filter(p -> p.getNombre().equalsIgnoreCase(nombre))
+                    .findFirst();
         }
 
         @Override
@@ -73,22 +105,63 @@ class PistaServiceTest {
 
         @Override
         public <S extends Pista> S save(S entity) {
-            if (entity.getIdPista() == null) entity.setIdPista(pistas.size() + 1);
+            if (entity.getIdPista() == null) {
+                entity.setIdPista(pistas.size() + 1);
+            }
             pistas.removeIf(p -> p.getIdPista().equals(entity.getIdPista()));
             pistas.add(entity);
             return entity;
         }
 
-        @Override public Optional<Pista> findById(Integer integer) { return pistas.stream().filter(p -> p.getIdPista().equals(integer)).findFirst(); }
-        @Override public Iterable<Pista> findAll() { return pistas; }
-        @Override public boolean existsById(Integer integer) { return pistas.stream().anyMatch(p -> p.getIdPista().equals(integer)); }
-        @Override public long count() { return pistas.size(); }
-        @Override public void deleteById(Integer integer) {}
-        @Override public void delete(Pista entity) {}
-        @Override public void deleteAllById(Iterable<? extends Integer> integers) {}
-        @Override public void deleteAll(Iterable<? extends Pista> entities) {}
-        @Override public void deleteAll() { pistas.clear(); }
-        @Override public <S extends Pista> Iterable<S> saveAll(Iterable<S> entities) { return entities; }
-        @Override public Iterable<Pista> findAllById(Iterable<Integer> integers) { return pistas; }
+        @Override
+        public Optional<Pista> findById(Integer integer) {
+            return pistas.stream().filter(p -> p.getIdPista().equals(integer)).findFirst();
+        }
+
+        @Override
+        public Iterable<Pista> findAll() {
+            return pistas;
+        }
+
+        @Override
+        public boolean existsById(Integer integer) {
+            return pistas.stream().anyMatch(p -> p.getIdPista().equals(integer));
+        }
+
+        @Override
+        public long count() {
+            return pistas.size();
+        }
+
+        @Override
+        public void deleteById(Integer integer) {
+        }
+
+        @Override
+        public void delete(Pista entity) {
+        }
+
+        @Override
+        public void deleteAllById(Iterable<? extends Integer> integers) {
+        }
+
+        @Override
+        public void deleteAll(Iterable<? extends Pista> entities) {
+        }
+
+        @Override
+        public void deleteAll() {
+            pistas.clear();
+        }
+
+        @Override
+        public <S extends Pista> Iterable<S> saveAll(Iterable<S> entities) {
+            return entities;
+        }
+
+        @Override
+        public Iterable<Pista> findAllById(Iterable<Integer> integers) {
+            return pistas;
+        }
     }
 }
